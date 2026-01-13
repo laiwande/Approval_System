@@ -28,7 +28,7 @@ const handleLogin = async () => {
 };
 
 // 动态标题动画
-const fullTitle = 'Meeting Room Booking System';
+const fullTitle = 'Welcome To Approval System';
 const animatedTitle = ref('');
 const subtitleVisible = ref(false);
 

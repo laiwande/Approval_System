@@ -3,15 +3,16 @@ import { useAuthStore } from '@/stores/auth';
 import LoginView from '../views/LoginView.vue';
 import SignupView from '../views/SignupView.vue';
 import DashboardView from '../views/DashboardView.vue';
-import NewReservationView from '@/views/NewReservationView.vue';
-import RoomsView from '@/views/RoomsView.vue';
-import MyReservationsView from '@/views/MyReservationsView.vue';
+import NewApplyView from '@/views/NewApplyView.vue';
+import MyAppliesView from '@/views/MyAppliesView.vue';
+import ApprovalTasksView from '@/views/ApprovalTasksView.vue';
 import AdminDashboardView from '@/views/AdminDashboardView.vue';
-import ManageRoomsView from '@/views/ManageRoomsView.vue';
-import StatisticsView from '@/views/StatisticsView.vue';
 import ManageUsersView from '@/views/ManageUsersView.vue';
-import MyCalendarView from '@/views/MyCalendarView.vue';
-import NoticesView from '@/views/NoticesView.vue';
+import ManageDepartmentsView from '@/views/ManageDepartmentsView.vue';
+import ManagePostsView from '@/views/ManagePostsView.vue';
+import ApplyProgressView from '@/views/ApplyProgressView.vue';
+import ApplyHistoryView from '@/views/ApplyHistoryView.vue';
+import AllAppliesView from '@/views/AllAppliesView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -26,64 +27,70 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/rooms',
-      name: 'rooms',
-      component: RoomsView,
+      path: '/applies/new',
+      name: 'new-apply',
+      component: NewApplyView,
       meta: { requiresAuth: true }
     },
     {
-      path: '/reservations/new',
-      name: 'new-reservation',
-      component: NewReservationView,
+      path: '/applies/my',
+      name: 'my-applies',
+      component: MyAppliesView,
       meta: { requiresAuth: true }
     },
     {
-      path: '/reservations/my',
-      name: 'my-reservations',
-      component: MyReservationsView,
+      path: '/applies/progress',
+      name: 'apply-progress',
+      component: ApplyProgressView,
       meta: { requiresAuth: true }
     },
     {
-      path: '/reservations/my',
-      name: 'my-reservations',
-      component: MyReservationsView,
-      meta: { requiresAuth: true } 
+      path: '/applies/history',
+      name: 'apply-history',
+      component: ApplyHistoryView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/applies/all',
+      name: 'all-applies',
+      component: AllAppliesView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/applies/:id',
+      name: 'apply-detail',
+      component: MyAppliesView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/approvals/tasks',
+      name: 'approval-tasks',
+      component: ApprovalTasksView,
+      meta: { requiresAuth: true, roles: ['ROLE_APPROVER', 'ROLE_ADMIN'] }
     },
     {
       path: '/admin/dashboard',
       name: 'admin-dashboard',
       component: AdminDashboardView,
-      meta: { requiresAuth: true, roles: ['ROOM_ADMIN', 'SYSTEM_ADMIN'] } 
-    },
-    {
-      path: '/admin/manage-rooms',
-      name: 'admin-manage-rooms',
-      component: ManageRoomsView,
-      meta: { requiresAuth: true, roles: ['ROOM_ADMIN', 'SYSTEM_ADMIN'] } 
-    },
-    {
-      path: '/admin/statistics',
-      name: 'admin-statistics',
-      component: StatisticsView,
-      meta: { requiresAuth: true, roles: ['ROOM_ADMIN', 'SYSTEM_ADMIN'] } 
+      meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] } 
     },
     {
       path: '/admin/users',
       name: 'admin-users',
       component: ManageUsersView,
-      meta: { requiresAuth: true, roles: ['SYSTEM_ADMIN'] } 
+      meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] } 
     },
     {
-      path: '/calendar',
-      name: 'my-calendar',
-      component: MyCalendarView,
-      meta: { requiresAuth: true }
+      path: '/admin/departments',
+      name: 'admin-departments',
+      component: ManageDepartmentsView,
+      meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] } 
     },
     {
-      path: '/notices',
-      name: 'notices',
-      component: NoticesView,
-      meta: { requiresAuth: true }
+      path: '/admin/posts',
+      name: 'admin-posts',
+      component: ManagePostsView,
+      meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] } 
     },
   ]
 });

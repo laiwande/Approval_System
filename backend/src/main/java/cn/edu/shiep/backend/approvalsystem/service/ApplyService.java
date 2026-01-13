@@ -1,0 +1,297 @@
+package cn.edu.shiep.backend.approvalsystem.service;
+
+import cn.edu.shiep.backend.approvalsystem.dto.*;
+import cn.edu.shiep.backend.approvalsystem.dto.request.ApplyRequest;
+import cn.edu.shiep.backend.approvalsystem.entity.*;
+import cn.edu.shiep.backend.approvalsystem.enums.ApplyStatus;
+import cn.edu.shiep.backend.approvalsystem.enums.ApplyType;
+import cn.edu.shiep.backend.approvalsystem.enums.TaskStatus;
+import cn.edu.shiep.backend.approvalsystem.repository.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+@Service
+public class ApplyService {
+
+    @Autowired
+    private ApplyRepository applyRepository;
+
+    @Autowired
+    private LeaveApplyRepository leaveApplyRepository;
+
+    @Autowired
+    private ReimburseApplyRepository reimburseApplyRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private ApprovalProcessRepository approvalProcessRepository;
+
+    @Autowired
+    private ApprovalNodeRepository approvalNodeRepository;
+
+    @Autowired
+    private ApprovalTaskRepository approvalTaskRepository;
+
+    @Autowired
+    private PostRepository postRepository;
+
+    @Autowired
+    private ApprovalRecordRepository approvalRecordRepository;
+
+
+    // 创建申请
+    @Transactional
+    public ApplyDTO createApply(ApplyRequest request, Long userId) {
+        User applicant = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("用户未找到"));
+
+        // 创建申请主记录
+        Apply apply = new Apply();
+        apply.setApplyType(request.getApplyType());
+        apply.setApplicantId(userId);
+        apply.setStatus(ApplyStatus.DRAFT);
+        apply.setCurrentNode(0);
+        apply.setCreateTime(LocalDateTime.now());
+        apply.setRemark(request.getRemark());
+
+        Apply savedApply = applyRepository.save(apply);
+
+        // 根据申请类型创建具体申请
+        if (request.getApplyType() == ApplyType.LEAVE) {
+            LeaveApply leaveApply = new LeaveApply();
+            leaveApply.setApplyId(savedApply.getApplyId());
+            leaveApply.setLeaveType(request.getLeaveType());
+            leaveApply.setStartTime(request.getStartTime());
+            leaveApply.setEndTime(request.getEndTime());
+            
+            // 计算请假天数
+            if (request.getLeaveDays() != null) {
+                leaveApply.setLeaveDays(request.getLeaveDays());
+            } else {
+                Duration duration = Duration.between(request.getStartTime(), request.getEndTime());
+                long hours = duration.toHours();
+                BigDecimal days = BigDecimal.valueOf(hours).divide(BigDecimal.valueOf(8), 2, BigDecimal.ROUND_HALF_UP);
+                leaveApply.setLeaveDays(days);
+            }
+            
+            leaveApply.setReason(request.getReason());
+            leaveApply.setApply(savedApply);
+            leaveApplyRepository.save(leaveApply);
+        } else if (request.getApplyType() == ApplyType.REIMBURSE) {
+            ReimburseApply reimburseApply = new ReimburseApply();
+            reimburseApply.setApplyId(savedApply.getApplyId());
+            reimburseApply.setExpenseType(request.getExpenseType());
+            reimburseApply.setAmount(request.getAmount());
+            reimburseApply.setReason(request.getReason());
+            reimburseApply.setInvoiceUrl(request.getInvoiceUrl());
+            reimburseApply.setApply(savedApply);
+            reimburseApplyRepository.save(reimburseApply);
+        }
+
+        return toApplyDTO(savedApply);
+    }
+
+    // 提交申请（从草稿状态变为待审批）
+    @Transactional
+    public ApplyDTO submitApply(Long applyId, Long userId) {
+        Apply apply = applyRepository.findById(applyId)
+                .orElseThrow(() -> new RuntimeException("申请未找到"));
+
+        if (!Objects.equals(apply.getApplicantId(), userId)) {
+            throw new RuntimeException("权限不足，您无法提交不属于您的申请");
+        }
+
+        if (apply.getStatus() != ApplyStatus.DRAFT) {
+            throw new RuntimeException("只能提交草稿状态的申请");
+        }
+
+        // 查找对应的审批流程
+        ApprovalProcess process = approvalProcessRepository
+                .findByApplyTypeAndStatus(apply.getApplyType(), "0")
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("未找到对应的审批流程"));
+
+        // 获取第一个审批节点
+        List<ApprovalNode> nodes = approvalNodeRepository.findByProcessIdOrderByNodeOrderAsc(process.getProcessId());
+        if (nodes.isEmpty()) {
+            throw new RuntimeException("审批流程未配置审批节点");
+        }
+
+        ApprovalNode firstNode = nodes.get(0);
+        apply.setStatus(ApplyStatus.PENDING);
+        apply.setCurrentNode(firstNode.getNodeOrder());
+        apply.setUpdateTime(LocalDateTime.now());
+        applyRepository.save(apply);
+
+        // 创建审批任务
+        createApprovalTasks(apply, firstNode);
+
+        return toApplyDTO(apply);
+    }
+
+    // 创建审批任务
+    private void createApprovalTasks(Apply apply, ApprovalNode node) {
+        Post post = postRepository.findById(node.getPostId())
+                .orElseThrow(() -> new RuntimeException("岗位未找到"));
+
+        // 获取该岗位的所有用户
+        List<User> approvers = userRepository.findAll().stream()
+                .filter(user -> user.getPosts().contains(post))
+                .collect(Collectors.toList());
+
+        if (approvers.isEmpty()) {
+            throw new RuntimeException("该岗位没有分配用户，无法创建审批任务");
+        }
+
+        // 为每个审批人创建任务
+        for (User approver : approvers) {
+            ApprovalTask task = new ApprovalTask();
+            task.setApplyId(apply.getApplyId());
+            task.setNodeOrder(node.getNodeOrder());
+            task.setApproverId(approver.getUserId());
+            task.setStatus(TaskStatus.PENDING);
+            task.setCreateTime(LocalDateTime.now());
+            approvalTaskRepository.save(task);
+        }
+    }
+
+    // 撤回申请
+    @Transactional
+    public void withdrawApply(Long applyId, Long userId) {
+        Apply apply = applyRepository.findById(applyId)
+                .orElseThrow(() -> new RuntimeException("申请未找到"));
+
+        if (!Objects.equals(apply.getApplicantId(), userId)) {
+            throw new RuntimeException("权限不足，您无法撤回不属于您的申请");
+        }
+
+        if (apply.getStatus() != ApplyStatus.DRAFT && apply.getStatus() != ApplyStatus.PENDING) {
+            throw new RuntimeException("只能撤回草稿或待审批状态的申请");
+        }
+
+        // 检查是否有审批任务已处理
+        List<ApprovalTask> tasks = approvalTaskRepository.findByApplyId(applyId);
+        boolean hasProcessedTask = tasks.stream()
+                .anyMatch(task -> task.getStatus() == TaskStatus.DONE);
+
+        if (hasProcessedTask) {
+            throw new RuntimeException("申请已进入审批流程，无法撤回");
+        }
+
+        apply.setStatus(ApplyStatus.WITHDRAWN);
+        apply.setUpdateTime(LocalDateTime.now());
+        applyRepository.save(apply);
+
+        // 删除未处理的审批任务
+        tasks.stream()
+                .filter(task -> task.getStatus() == TaskStatus.PENDING)
+                .forEach(approvalTaskRepository::delete);
+    }
+
+    // 获取我的申请列表
+    public List<ApplyDTO> getMyApplies(Long userId) {
+        return applyRepository.findByApplicantId(userId).stream()
+                .map(this::toApplyDTO)
+                .collect(Collectors.toList());
+    }
+
+    // 获取申请详情
+    public ApplyDTO getApplyDetail(Long applyId, Long userId) {
+        Apply apply = applyRepository.findById(applyId)
+                .orElseThrow(() -> new RuntimeException("申请未找到"));
+
+        // 权限检查：申请人可以查看，审批人可以查看
+        if (!Objects.equals(apply.getApplicantId(), userId)) {
+            // 检查是否是审批人
+            boolean isApprover = approvalTaskRepository.findByApplyId(applyId).stream()
+                    .anyMatch(task -> Objects.equals(task.getApproverId(), userId));
+            if (!isApprover) {
+                throw new RuntimeException("权限不足，您无法查看此申请");
+            }
+        }
+
+        return toApplyDTO(apply);
+    }
+
+    // 转换为 DTO（供外部调用）
+    public ApplyDTO toApplyDTO(Apply apply) {
+        ApplyDTO.ApplyDTOBuilder builder = ApplyDTO.builder()
+                .applyId(apply.getApplyId())
+                .applyType(apply.getApplyType())
+                .applicantId(apply.getApplicantId())
+                .status(apply.getStatus())
+                .currentNode(apply.getCurrentNode())
+                .createTime(apply.getCreateTime())
+                .updateTime(apply.getUpdateTime())
+                .remark(apply.getRemark());
+
+        // 加载申请人信息
+        User applicant = userRepository.findById(apply.getApplicantId()).orElse(null);
+        if (applicant != null) {
+            builder.applicantName(applicant.getNickName() != null ? applicant.getNickName() : applicant.getUserName());
+            builder.applicantEmail(applicant.getEmail());
+        }
+
+        // 加载请假申请详情
+        if (apply.getLeaveApply() != null) {
+            LeaveApply leaveApply = apply.getLeaveApply();
+            builder.leaveApply(LeaveApplyDTO.builder()
+                    .applyId(leaveApply.getApplyId())
+                    .leaveType(leaveApply.getLeaveType())
+                    .startTime(leaveApply.getStartTime())
+                    .endTime(leaveApply.getEndTime())
+                    .leaveDays(leaveApply.getLeaveDays())
+                    .reason(leaveApply.getReason())
+                    .build());
+        }
+
+        // 加载报销申请详情
+        if (apply.getReimburseApply() != null) {
+            ReimburseApply reimburseApply = apply.getReimburseApply();
+            builder.reimburseApply(ReimburseApplyDTO.builder()
+                    .applyId(reimburseApply.getApplyId())
+                    .expenseType(reimburseApply.getExpenseType())
+                    .amount(reimburseApply.getAmount())
+                    .reason(reimburseApply.getReason())
+                    .invoiceUrl(reimburseApply.getInvoiceUrl())
+                    .build());
+        }
+
+        // 加载审批记录
+        List<ApprovalRecord> records = approvalRecordRepository.findByApplyIdOrderByActionTimeAsc(apply.getApplyId());
+        builder.records(records.stream()
+                .map(this::toApprovalRecordDTO)
+                .collect(Collectors.toList()));
+
+        return builder.build();
+    }
+
+    private ApprovalRecordDTO toApprovalRecordDTO(ApprovalRecord record) {
+        ApprovalRecordDTO.ApprovalRecordDTOBuilder builder = ApprovalRecordDTO.builder()
+                .recordId(record.getRecordId())
+                .applyId(record.getApplyId())
+                .nodeOrder(record.getNodeOrder())
+                .approverId(record.getApproverId())
+                .action(record.getAction())
+                .comment(record.getComment())
+                .actionTime(record.getActionTime());
+
+        User approver = userRepository.findById(record.getApproverId()).orElse(null);
+        if (approver != null) {
+            builder.approverName(approver.getNickName() != null ? approver.getNickName() : approver.getUserName());
+        }
+
+        return builder.build();
+    }
+}
