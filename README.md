@@ -15,7 +15,7 @@
 
 ### 后端部署
 ```bash
-git clone https://github.com/Themaoqiu/Meeting-MIS.git
+git clone https://github.com/laiwande/Approval_System.git
 cd backend
 mvn spring-boot:run
 ```
