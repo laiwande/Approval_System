@@ -14,7 +14,6 @@ const isLoading = ref(true);
 const showCreateDialog = ref(false);
 const createForm = ref({
   deptName: '',
-  deptCode: '',
   leader: '',
   phone: '',
   email: '',
@@ -44,7 +43,6 @@ const handleCreateDepartment = async () => {
     showCreateDialog.value = false;
     createForm.value = {
       deptName: '',
-      deptCode: '',
       leader: '',
       phone: '',
       email: '',
@@ -95,10 +93,6 @@ const handleDeleteDepartment = async (deptId: number) => {
               <Input id="deptName" v-model="createForm.deptName" required class="mt-2" />
             </div>
             <div>
-              <Label for="deptCode">部门编码</Label>
-              <Input id="deptCode" v-model="createForm.deptCode" required class="mt-2" />
-            </div>
-            <div>
               <Label for="leader">负责人</Label>
               <Input id="leader" v-model="createForm.leader" class="mt-2" />
             </div>
@@ -140,7 +134,6 @@ const handleDeleteDepartment = async (deptId: number) => {
         <TableBody>
           <TableRow v-for="dept in departments" :key="dept.deptId">
             <TableCell>{{ dept.deptName }}</TableCell>
-            <TableCell>{{ dept.deptCode }}</TableCell>
             <TableCell>{{ dept.leader || 'N/A' }}</TableCell>
             <TableCell>{{ dept.phone || 'N/A' }}</TableCell>
             <TableCell>{{ dept.email || 'N/A' }}</TableCell>

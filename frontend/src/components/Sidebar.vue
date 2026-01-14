@@ -36,7 +36,7 @@ onMounted(() => {
   if (isActiveRoute('/applies')) {
     myAppliesOpen.value = true;
   }
-  if (isActiveRoute('/admin/users') || isActiveRoute('/admin/departments') || isActiveRoute('/admin/posts')) {
+  if (isActiveRoute('/admin/users') || isActiveRoute('/admin/departments') || isActiveRoute('/admin/posts') || isActiveRoute('/admin/approval-processes')) {
     userManagementOpen.value = true;
   }
 });
@@ -107,18 +107,27 @@ watch(() => route.path, (newPath) => {
           </CollapsibleContent>
         </Collapsible>
 
-        <!-- 用户管理下拉菜单 -->
+        <!-- 我的待批 -->
+        <h3 class="text-sm font-semibold text-muted-foreground px-4 mt-2 mb-1">审批管理</h3>
+        <Button variant="ghost" class="justify-start" as-child>
+          <RouterLink to="/approvals/tasks" active-class="bg-accent text-accent-foreground">
+            <CalendarCheck class="mr-2 h-4 w-4" />
+            我的待批
+          </RouterLink>
+        </Button>
+
+        <!-- 公司管理下拉菜单 -->
         <h3 class="text-sm font-semibold text-muted-foreground px-4 mt-2 mb-1">系统管理</h3>
         <Collapsible v-model:open="userManagementOpen" class="w-full">
           <CollapsibleTrigger class="w-full">
             <Button 
               variant="ghost" 
               class="justify-between w-full"
-              :class="{ 'bg-accent text-accent-foreground': isActiveRoute('/admin/users') || isActiveRoute('/admin/departments') || isActiveRoute('/admin/posts') }"
+              :class="{ 'bg-accent text-accent-foreground': isActiveRoute('/admin/users') || isActiveRoute('/admin/departments') || isActiveRoute('/admin/posts') || isActiveRoute('/admin/approval-processes') }"
             >
               <div class="flex items-center">
                 <Users class="mr-2 h-4 w-4" />
-                用户管理
+                公司管理
               </div>
               <ChevronDown 
                 v-if="userManagementOpen" 
@@ -135,7 +144,7 @@ watch(() => route.path, (newPath) => {
               <Button variant="ghost" class="justify-start w-full" as-child>
                 <RouterLink to="/admin/users" active-class="bg-accent text-accent-foreground">
                   <Users class="mr-2 h-4 w-4" />
-                  管理用户
+                  用户管理
                 </RouterLink>
               </Button>
               <Button variant="ghost" class="justify-start w-full" as-child>
@@ -148,6 +157,12 @@ watch(() => route.path, (newPath) => {
                 <RouterLink to="/admin/posts" active-class="bg-accent text-accent-foreground">
                   <Briefcase class="mr-2 h-4 w-4" />
                   岗位信息
+                </RouterLink>
+              </Button>
+              <Button variant="ghost" class="justify-start w-full" as-child>
+                <RouterLink to="/admin/approval-processes" active-class="bg-accent text-accent-foreground">
+                  <FileText class="mr-2 h-4 w-4" />
+                  设计审核流程
                 </RouterLink>
               </Button>
             </div>

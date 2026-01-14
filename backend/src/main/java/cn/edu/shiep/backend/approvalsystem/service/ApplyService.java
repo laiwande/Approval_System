@@ -69,7 +69,7 @@ public class ApplyService {
         // 根据申请类型创建具体申请
         if (request.getApplyType() == ApplyType.LEAVE) {
             LeaveApply leaveApply = new LeaveApply();
-            leaveApply.setApplyId(savedApply.getApplyId());
+            // leaveApply.setApplyId(savedApply.getApplyId());
             leaveApply.setLeaveType(request.getLeaveType());
             leaveApply.setStartTime(request.getStartTime());
             leaveApply.setEndTime(request.getEndTime());

@@ -125,7 +125,10 @@ const handleDeletePost = async (postId: number) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="post in posts" :key="post.postId">
+          <TableRow v-if="posts.length === 0">
+            <TableCell colspan="6" class="text-center text-muted-foreground py-8">暂无岗位信息</TableCell>
+          </TableRow>
+          <TableRow v-else v-for="post in posts" :key="post.postId">
             <TableCell>{{ post.postName }}</TableCell>
             <TableCell>{{ post.postCode }}</TableCell>
             <TableCell>{{ post.postSort }}</TableCell>
