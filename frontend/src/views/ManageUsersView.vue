@@ -15,14 +15,22 @@ const authStore = useAuthStore()
 
 const users = ref([]);
 const isLoading = ref(true);
-const roles = ['USER', 'ROOM_ADMIN', 'SYSTEM_ADMIN'];
+const roles = ['EMPLOYEE', 'APPROVER', 'ADMIN'];
+const roleLabels: Record<string, string> = {
+  'EMPLOYEE': '员工',
+  'APPROVER': '审批人',
+  'ADMIN': '管理员',
+  'ROLE_EMPLOYEE': '员工',
+  'ROLE_APPROVER': '审批人',
+  'ROLE_ADMIN': '管理员'
+};
 const showCreateDialog = ref(false);
 const createForm = ref({
   username: '',
   email: '',
   password: '',
   phone: '',
-  role: 'USER',
+  role: 'EMPLOYEE',
 });
 const createLoading = ref(false);
 
@@ -30,8 +38,12 @@ const fetchUsers = async () => {
   if (!authStore.isLoggedIn) return
   try {
     const response = await getAllUsers();
-    // 假设每个用户只有一个角色，简化处理
-    users.value = response.data.map((u: { roles: any[]; }) => ({...u, roles: u.roles[0] }));
+    // 假设每个用户只有一个角色，简化处理，移除ROLE_前缀用于显示
+    users.value = response.data.map((u: { roles: any[]; }) => {
+      const role = u.roles[0] || '';
+      const displayRole = role.startsWith('ROLE_') ? role.substring(5) : role;
+      return {...u, roles: displayRole };
+    });
   } catch (error) {
     toast.error('获取用户列表失败');
   } finally {
@@ -72,7 +84,7 @@ const handleCreateUser = async () => {
     await createUser(createForm.value);
     toast.success('新用户创建成功！');
     showCreateDialog.value = false;
-    createForm.value = { username: '', email: '', password: '', phone: '', role: 'USER' };
+    createForm.value = { username: '', email: '', password: '', phone: '', role: 'EMPLOYEE' };
     await fetchUsers();
   } catch (e: any) {
     toast.error(e?.response?.data || '创建失败');
@@ -118,7 +130,7 @@ const handleCreateUser = async () => {
                   <SelectValue placeholder="选择角色" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem v-for="role in roles" :key="role" :value="role">{{ role }}</SelectItem>
+                  <SelectItem v-for="role in roles" :key="role" :value="role">{{ roleLabels[role] || role }}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -154,7 +166,7 @@ const handleCreateUser = async () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem v-for="role in roles" :key="role" :value="role">
-                    {{ role }}
+                    {{ roleLabels[role] || role }}
                   </SelectItem>
                 </SelectContent>
               </Select>

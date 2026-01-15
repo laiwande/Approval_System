@@ -1,6 +1,7 @@
 package cn.edu.shiep.backend.approvalsystem.entity;
 
 import cn.edu.shiep.backend.approvalsystem.enums.ApplyType;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,6 +13,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
+@JsonIgnoreProperties({"nodes"})
 public class ApprovalProcess {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

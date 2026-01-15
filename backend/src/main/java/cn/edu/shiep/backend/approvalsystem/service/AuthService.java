@@ -104,7 +104,7 @@ public class AuthService {
                 user.getUserName(),
                 user.getEmail(),
                 user.getPhonenumber(),
-                Set.of(user.getRole().getName().name())
+                Set.of("ROLE_" + user.getRole().getName().name())
         );
     }
 }

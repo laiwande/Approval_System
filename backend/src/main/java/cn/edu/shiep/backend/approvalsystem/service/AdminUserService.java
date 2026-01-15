@@ -60,7 +60,7 @@ public class AdminUserService {
             .name(user.getUserName())
             .email(user.getEmail())
             .phone(user.getPhonenumber())
-            .roles(Collections.singleton(user.getRole().getName().name()))
+            .roles(Collections.singleton("ROLE_" + user.getRole().getName().name()))
             .build();
     }
 }

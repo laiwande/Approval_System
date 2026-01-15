@@ -13,6 +13,7 @@ import ManagePostsView from '@/views/ManagePostsView.vue';
 import ApplyProgressView from '@/views/ApplyProgressView.vue';
 import ApplyHistoryView from '@/views/ApplyHistoryView.vue';
 import AllAppliesView from '@/views/AllAppliesView.vue';
+import ManageApprovalProcessesView from '@/views/ManageApprovalProcessesView.vue';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -90,6 +91,12 @@ const router = createRouter({
       path: '/admin/posts',
       name: 'admin-posts',
       component: ManagePostsView,
+      meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] } 
+    },
+    {
+      path: '/admin/approval-processes',
+      name: 'admin-approval-processes',
+      component: ManageApprovalProcessesView,
       meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] } 
     },
   ]
