@@ -23,22 +23,30 @@ public class ApplyController {
     @PostMapping
     public ResponseEntity<ApplyDTO> createApply(@RequestBody ApplyRequest request,
                                                 @AuthenticationPrincipal UserDetails userDetails) {
-        UserDetailsImpl userDetailsImpl = (UserDetailsImpl) userDetails;
-        Long userId = userDetailsImpl.getId();
+        try {
+            UserDetailsImpl userDetailsImpl = (UserDetailsImpl) userDetails;
+            Long userId = userDetailsImpl.getId();
 
-        ApplyDTO response = applyService.createApply(request, userId);
-        return ResponseEntity.ok(response);
+            ApplyDTO response = applyService.createApply(request, userId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            throw e; // 让全局异常处理器处理
+        }
     }
 
     // 提交申请
     @PostMapping("/{id}/submit")
     public ResponseEntity<ApplyDTO> submitApply(@PathVariable Long id,
                                                 @AuthenticationPrincipal UserDetails userDetails) {
-        UserDetailsImpl userDetailsImpl = (UserDetailsImpl) userDetails;
-        Long userId = userDetailsImpl.getId();
+        try {
+            UserDetailsImpl userDetailsImpl = (UserDetailsImpl) userDetails;
+            Long userId = userDetailsImpl.getId();
 
-        ApplyDTO response = applyService.submitApply(id, userId);
-        return ResponseEntity.ok(response);
+            ApplyDTO response = applyService.submitApply(id, userId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            throw e; // 让全局异常处理器处理
+        }
     }
 
     // 撤回申请

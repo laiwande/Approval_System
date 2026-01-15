@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { toast } from 'vue-sonner';
-import { Trash2 } from 'lucide-vue-next';
+import { Trash2, Plus } from 'lucide-vue-next';
 import { useAuthStore } from '@/stores/auth'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -98,7 +98,10 @@ const handleCreateUser = async () => {
   <div>
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold">用户管理</h1>
-      <Button @click="showCreateDialog = true">新建用户</Button>
+      <Button @click="showCreateDialog = true">
+        <Plus class="mr-2 h-4 w-4" />
+        新建用户
+      </Button>
     </div>
     <Dialog v-model:open="showCreateDialog">
       <DialogContent class="max-w-md">
@@ -106,7 +109,7 @@ const handleCreateUser = async () => {
           <DialogTitle>新建用户</DialogTitle>
         </DialogHeader>
         <form @submit.prevent="handleCreateUser">
-          <div class="space-y-6">
+          <div class="space-y-4">
             <div>
               <Label for="username" class="block mb-2">用户名</Label>
               <Input id="username" v-model="createForm.username" required maxlength="20" class="mt-2" />
