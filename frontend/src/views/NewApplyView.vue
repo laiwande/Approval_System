@@ -70,7 +70,8 @@ const calculateLeaveDays = () => {
     const start = new Date(apply.value.startTime);
     const end = new Date(apply.value.endTime);
     const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = diffTime / (1000 * 60 * 60 * 8); // 按8小时工作日计算
+    // 按自然日计算：1天 = 24小时
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
     apply.value.leaveDays = diffDays.toFixed(2);
   }
 };

@@ -11,5 +11,5 @@ const authStore = useAuthStore()
   <MainLayout v-if="authStore.isLoggedIn" />
   <RouterView v-else />
   
-  <Toaster richColors position="top-right"   />
+  <Toaster richColors position="top-right" :duration="1000" />
 </template>

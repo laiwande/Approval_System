@@ -7,6 +7,7 @@ import cn.edu.shiep.backend.approvalsystem.dto.request.ApprovalRequest;
 import cn.edu.shiep.backend.approvalsystem.entity.*;
 import cn.edu.shiep.backend.approvalsystem.enums.ApplyStatus;
 import cn.edu.shiep.backend.approvalsystem.enums.ApprovalAction;
+import cn.edu.shiep.backend.approvalsystem.enums.ERole;
 import cn.edu.shiep.backend.approvalsystem.enums.TaskStatus;
 import cn.edu.shiep.backend.approvalsystem.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,10 +44,19 @@ public class ApprovalService {
     private ApplyService applyService;
 
     @Autowired
-    private PostRepository postRepository;
+    private RoleRepository roleRepository;
 
     // 获取我的待办任务
     public List<ApprovalTaskDTO> getMyPendingTasks(Long approverId) {
+        // 检查用户是否有审批权限
+        User user = userRepository.findById(approverId)
+                .orElseThrow(() -> new RuntimeException("用户未找到"));
+        
+        if (user.getRole() == null || 
+            (user.getRole().getName() != ERole.APPROVER && user.getRole().getName() != ERole.ADMIN)) {
+            throw new RuntimeException("权限不足，只有审批人和管理员可以查看审批任务");
+        }
+
         return approvalTaskRepository.findPendingTasksByApprover(approverId, TaskStatus.PENDING).stream()
                 .map(this::toApprovalTaskDTO)
                 .collect(Collectors.toList());
@@ -55,6 +65,15 @@ public class ApprovalService {
     // 处理审批任务
     @Transactional
     public void processApproval(ApprovalRequest request, Long approverId) {
+        // 检查用户是否有审批权限（角色检查）
+        User user = userRepository.findById(approverId)
+                .orElseThrow(() -> new RuntimeException("用户未找到"));
+        
+        if (user.getRole() == null || 
+            (user.getRole().getName() != ERole.APPROVER && user.getRole().getName() != ERole.ADMIN)) {
+            throw new RuntimeException("权限不足，只有审批人和管理员可以处理审批任务");
+        }
+
         ApprovalTask task = approvalTaskRepository.findById(request.getTaskId())
                 .orElseThrow(() -> new RuntimeException("审批任务未找到"));
 
@@ -139,18 +158,14 @@ public class ApprovalService {
         }
     }
 
-    // 创建审批任务
+    // 创建审批任务（基于角色：APPROVER 和 ADMIN）
     private void createApprovalTasks(Apply apply, ApprovalNode node) {
-        Post post = postRepository.findById(node.getPostId())
-                .orElseThrow(() -> new RuntimeException("岗位未找到"));
-
-        // 获取该岗位的所有用户
-        List<User> approvers = userRepository.findAll().stream()
-                .filter(user -> user.getPosts().contains(post))
-                .collect(Collectors.toList());
+        // 获取所有具有 APPROVER 或 ADMIN 角色的用户（使用 JOIN FETCH 确保角色被正确加载）
+        List<ERole> approverRoles = List.of(ERole.APPROVER, ERole.ADMIN);
+        List<User> approvers = userRepository.findByRoleNameInAndActive(approverRoles);
 
         if (approvers.isEmpty()) {
-            throw new RuntimeException("该岗位没有分配用户，无法创建审批任务");
+            throw new RuntimeException("系统中没有可用的审批人（APPROVER）或管理员（ADMIN），无法创建审批任务");
         }
 
         // 为每个审批人创建任务
@@ -167,6 +182,15 @@ public class ApprovalService {
 
     // 获取我的已处理记录
     public List<ApprovalRecordDTO> getMyProcessedRecords(Long approverId) {
+        // 检查用户是否有审批权限
+        User user = userRepository.findById(approverId)
+                .orElseThrow(() -> new RuntimeException("用户未找到"));
+        
+        if (user.getRole() == null || 
+            (user.getRole().getName() != ERole.APPROVER && user.getRole().getName() != ERole.ADMIN)) {
+            throw new RuntimeException("权限不足，只有审批人和管理员可以查看审批记录");
+        }
+
         return approvalRecordRepository.findByApproverId(approverId).stream()
                 .map(this::toApprovalRecordDTO)
                 .collect(Collectors.toList());

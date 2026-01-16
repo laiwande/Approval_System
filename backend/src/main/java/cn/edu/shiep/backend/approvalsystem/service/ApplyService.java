@@ -5,6 +5,7 @@ import cn.edu.shiep.backend.approvalsystem.dto.request.ApplyRequest;
 import cn.edu.shiep.backend.approvalsystem.entity.*;
 import cn.edu.shiep.backend.approvalsystem.enums.ApplyStatus;
 import cn.edu.shiep.backend.approvalsystem.enums.ApplyType;
+import cn.edu.shiep.backend.approvalsystem.enums.ERole;
 import cn.edu.shiep.backend.approvalsystem.enums.TaskStatus;
 import cn.edu.shiep.backend.approvalsystem.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,6 +49,9 @@ public class ApplyService {
     @Autowired
     private ApprovalRecordRepository approvalRecordRepository;
 
+    @Autowired
+    private RoleRepository roleRepository;
+
 
     // 创建申请
     @Transactional
@@ -78,9 +82,10 @@ public class ApplyService {
             if (request.getLeaveDays() != null) {
                 leaveApply.setLeaveDays(request.getLeaveDays());
             } else {
+                // 按自然日计算：1天 = 24小时
                 Duration duration = Duration.between(request.getStartTime(), request.getEndTime());
                 long hours = duration.toHours();
-                BigDecimal days = BigDecimal.valueOf(hours).divide(BigDecimal.valueOf(8), 2, BigDecimal.ROUND_HALF_UP);
+                BigDecimal days = BigDecimal.valueOf(hours).divide(BigDecimal.valueOf(24), 2, BigDecimal.ROUND_HALF_UP);
                 leaveApply.setLeaveDays(days);
             }
             
@@ -164,19 +169,15 @@ public class ApplyService {
         }
     }
 
-    // 创建审批任务
+    // 创建审批任务（基于角色：APPROVER 和 ADMIN）
     private void createApprovalTasks(Apply apply, ApprovalNode node) {
         try {
-            Post post = postRepository.findById(node.getPostId())
-                    .orElseThrow(() -> new RuntimeException("审批节点关联的岗位未找到，岗位ID: " + node.getPostId()));
-
-            // 获取该岗位的所有用户
-            List<User> approvers = userRepository.findAll().stream()
-                    .filter(user -> user.getPosts() != null && user.getPosts().contains(post))
-                    .collect(Collectors.toList());
+            // 获取所有具有 APPROVER 或 ADMIN 角色的用户（使用 JOIN FETCH 确保角色被正确加载）
+            List<ERole> approverRoles = List.of(ERole.APPROVER, ERole.ADMIN);
+            List<User> approvers = userRepository.findByRoleNameInAndActive(approverRoles);
 
             if (approvers.isEmpty()) {
-                throw new RuntimeException("岗位【" + post.getPostName() + "】没有分配用户，无法创建审批任务。请在用户管理中为用户分配该岗位。");
+                throw new RuntimeException("系统中没有可用的审批人（APPROVER）或管理员（ADMIN），无法创建审批任务。请确保系统中有用户被分配了审批人或管理员角色。");
             }
 
             // 为每个审批人创建任务
