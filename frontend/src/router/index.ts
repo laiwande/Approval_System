@@ -6,7 +6,6 @@ import DashboardView from '../views/DashboardView.vue';
 import NewApplyView from '@/views/NewApplyView.vue';
 import MyAppliesView from '@/views/MyAppliesView.vue';
 import ApprovalTasksView from '@/views/ApprovalTasksView.vue';
-import AdminDashboardView from '@/views/AdminDashboardView.vue';
 import ManageUsersView from '@/views/ManageUsersView.vue';
 import ManageDepartmentsView from '@/views/ManageDepartmentsView.vue';
 import ManagePostsView from '@/views/ManagePostsView.vue';
@@ -68,12 +67,6 @@ const router = createRouter({
       name: 'approval-tasks',
       component: ApprovalTasksView,
       meta: { requiresAuth: true, roles: ['ROLE_APPROVER', 'ROLE_ADMIN'] }
-    },
-    {
-      path: '/admin/dashboard',
-      name: 'admin-dashboard',
-      component: AdminDashboardView,
-      meta: { requiresAuth: true, roles: ['ROLE_ADMIN'] } 
     },
     {
       path: '/admin/users',

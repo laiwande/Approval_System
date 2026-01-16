@@ -59,7 +59,7 @@ watch(() => route.path, (newPath) => {
     <nav class="flex flex-col gap-1">
       <h3 class="text-sm font-semibold text-muted-foreground px-4 mt-2 mb-1">主菜单</h3>
       <Button variant="ghost" class="justify-start" as-child>
-        <RouterLink to="/dashboard" active-class="bg-accent text-accent-foreground">
+        <RouterLink to="/dashboard" active-class="bg-primary/10 text-primary">
           <Home class="mr-2 h-4 w-4" />
           总览仪表盘
         </RouterLink>
@@ -73,10 +73,9 @@ watch(() => route.path, (newPath) => {
             <Button 
               variant="ghost" 
               class="justify-between w-full"
-              :class="{ 'bg-accent text-accent-foreground': isActiveRoute('/applies') }"
             >
               <div class="flex items-center">
-                <CalendarDays class="mr-2 h-4 w-4" />
+                <CalendarDays class="mr-4 h-4 w-4" />
                 我的申请
               </div>
               <ChevronDown 
@@ -92,13 +91,13 @@ watch(() => route.path, (newPath) => {
           <CollapsibleContent>
             <div class="pl-6 space-y-1">
               <Button variant="ghost" class="justify-start w-full" as-child>
-                <RouterLink to="/applies/new" active-class="bg-accent text-accent-foreground">
+                <RouterLink to="/applies/new" active-class="bg-primary/10 text-primary">
                   <CalendarPlus class="mr-2 h-4 w-4" />
                   新建申请
                 </RouterLink>
               </Button>
               <Button variant="ghost" class="justify-start w-full" as-child>
-                <RouterLink to="/applies/all" active-class="bg-accent text-accent-foreground">
+                <RouterLink to="/applies/all" active-class="bg-primary/10 text-primary">
                   <FileText class="mr-2 h-4 w-4" />
                   所有申请
                 </RouterLink>
@@ -110,7 +109,7 @@ watch(() => route.path, (newPath) => {
         <!-- 我的待批 -->
         <h3 class="text-sm font-semibold text-muted-foreground px-4 mt-2 mb-1">审批管理</h3>
         <Button variant="ghost" class="justify-start" as-child>
-          <RouterLink to="/approvals/tasks" active-class="bg-accent text-accent-foreground">
+          <RouterLink to="/approvals/tasks" active-class="bg-primary/10 text-primary">
             <CalendarCheck class="mr-2 h-4 w-4" />
             我的待批
           </RouterLink>
@@ -123,10 +122,9 @@ watch(() => route.path, (newPath) => {
             <Button 
               variant="ghost" 
               class="justify-between w-full"
-              :class="{ 'bg-accent text-accent-foreground': isActiveRoute('/admin/users') || isActiveRoute('/admin/departments') || isActiveRoute('/admin/posts') || isActiveRoute('/admin/approval-processes') }"
             >
               <div class="flex items-center">
-                <Users class="mr-2 h-4 w-4" />
+                <Users class="mr-4 h-4 w-4" />
                 公司管理
               </div>
               <ChevronDown 
@@ -142,25 +140,25 @@ watch(() => route.path, (newPath) => {
           <CollapsibleContent>
             <div class="pl-6 space-y-1">
               <Button variant="ghost" class="justify-start w-full" as-child>
-                <RouterLink to="/admin/users" active-class="bg-accent text-accent-foreground">
+                <RouterLink to="/admin/users" active-class="bg-primary/10 text-primary">
                   <Users class="mr-2 h-4 w-4" />
                   用户管理
                 </RouterLink>
               </Button>
               <Button variant="ghost" class="justify-start w-full" as-child>
-                <RouterLink to="/admin/departments" active-class="bg-accent text-accent-foreground">
+                <RouterLink to="/admin/departments" active-class="bg-primary/10 text-primary">
                   <Building2 class="mr-2 h-4 w-4" />
                   部门信息
                 </RouterLink>
               </Button>
               <Button variant="ghost" class="justify-start w-full" as-child>
-                <RouterLink to="/admin/posts" active-class="bg-accent text-accent-foreground">
+                <RouterLink to="/admin/posts" active-class="bg-primary/10 text-primary">
                   <Briefcase class="mr-2 h-4 w-4" />
                   岗位信息
                 </RouterLink>
               </Button>
               <Button variant="ghost" class="justify-start w-full" as-child>
-                <RouterLink to="/admin/approval-processes" active-class="bg-accent text-accent-foreground">
+                <RouterLink to="/admin/approval-processes" active-class="bg-primary/10 text-primary">
                   <FileText class="mr-2 h-4 w-4" />
                   设计审核流程
                 </RouterLink>
@@ -178,7 +176,6 @@ watch(() => route.path, (newPath) => {
             <Button 
               variant="ghost" 
               class="justify-between w-full"
-              :class="{ 'bg-accent text-accent-foreground': isActiveRoute('/applies') }"
             >
               <div class="flex items-center">
                 <CalendarDays class="mr-2 h-4 w-4" />
@@ -197,13 +194,13 @@ watch(() => route.path, (newPath) => {
           <CollapsibleContent>
             <div class="pl-6 space-y-1">
               <Button variant="ghost" class="justify-start w-full" as-child>
-                <RouterLink to="/applies/new" active-class="bg-accent text-accent-foreground">
+                <RouterLink to="/applies/new" active-class="bg-primary/10 text-primary">
                   <CalendarPlus class="mr-2 h-4 w-4" />
                   新建申请
                 </RouterLink>
               </Button>
               <Button variant="ghost" class="justify-start w-full" as-child>
-                <RouterLink to="/applies/all" active-class="bg-accent text-accent-foreground">
+                <RouterLink to="/applies/all" active-class="bg-primary/10 text-primary">
                   <FileText class="mr-2 h-4 w-4" />
                   所有申请
                 </RouterLink>
@@ -215,7 +212,7 @@ watch(() => route.path, (newPath) => {
         <!-- 我的待批 -->
         <h3 class="text-sm font-semibold text-muted-foreground px-4 mt-2 mb-1">审批管理</h3>
         <Button variant="ghost" class="justify-start" as-child>
-          <RouterLink to="/approvals/tasks" active-class="bg-accent text-accent-foreground">
+          <RouterLink to="/approvals/tasks" active-class="bg-primary/10 text-primary">
             <CalendarCheck class="mr-2 h-4 w-4" />
             我的待批
           </RouterLink>
@@ -230,7 +227,6 @@ watch(() => route.path, (newPath) => {
             <Button 
               variant="ghost" 
               class="justify-between w-full"
-              :class="{ 'bg-accent text-accent-foreground': isActiveRoute('/applies') }"
             >
               <div class="flex items-center">
                 <CalendarDays class="mr-2 h-4 w-4" />
@@ -249,13 +245,13 @@ watch(() => route.path, (newPath) => {
           <CollapsibleContent>
             <div class="pl-6 space-y-1">
               <Button variant="ghost" class="justify-start w-full" as-child>
-                <RouterLink to="/applies/new" active-class="bg-accent text-accent-foreground">
+                <RouterLink to="/applies/new" active-class="bg-primary/10 text-primary">
                   <CalendarPlus class="mr-2 h-4 w-4" />
                   新建申请
                 </RouterLink>
               </Button>
               <Button variant="ghost" class="justify-start w-full" as-child>
-                <RouterLink to="/applies/all" active-class="bg-accent text-accent-foreground">
+                <RouterLink to="/applies/all" active-class="bg-primary/10 text-primary">
                   <FileText class="mr-2 h-4 w-4" />
                   所有申请
                 </RouterLink>

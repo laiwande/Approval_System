@@ -105,7 +105,7 @@ const getStatusIcon = (status: string) => {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'APPROVED':
-      return 'text-green-500';
+      return 'text-green-500'; // 已批准保持绿色
     case 'REJECTED':
       return 'text-red-500';
     case 'PENDING':
@@ -145,7 +145,7 @@ const viewDetail = (applyId: number) => {
         <Button 
           variant="outline" 
           size="sm" 
-          :class="{ 'bg-accent': filterStatus === 'ALL' }"
+          :class="{ 'bg-primary/10 text-primary border-primary': filterStatus === 'ALL' }"
           @click="filterStatus = 'ALL'"
         >
           全部
@@ -153,7 +153,7 @@ const viewDetail = (applyId: number) => {
         <Button 
           variant="outline" 
           size="sm" 
-          :class="{ 'bg-accent': filterStatus === 'PENDING' }"
+          :class="{ 'bg-primary/10 text-primary border-primary': filterStatus === 'PENDING' }"
           @click="filterStatus = 'PENDING'"
         >
           待审批
@@ -161,7 +161,7 @@ const viewDetail = (applyId: number) => {
         <Button 
           variant="outline" 
           size="sm" 
-          :class="{ 'bg-accent': filterStatus === 'APPROVED' }"
+          :class="{ 'bg-primary/10 text-primary border-primary': filterStatus === 'APPROVED' }"
           @click="filterStatus = 'APPROVED'"
         >
           已批准
@@ -169,7 +169,7 @@ const viewDetail = (applyId: number) => {
         <Button 
           variant="outline" 
           size="sm" 
-          :class="{ 'bg-accent': filterStatus === 'REJECTED' }"
+          :class="{ 'bg-primary/10 text-primary border-primary': filterStatus === 'REJECTED' }"
           @click="filterStatus = 'REJECTED'"
         >
           已拒绝
@@ -177,7 +177,7 @@ const viewDetail = (applyId: number) => {
         <Button 
           variant="outline" 
           size="sm" 
-          :class="{ 'bg-accent': filterStatus === 'DRAFT' }"
+          :class="{ 'bg-primary/10 text-primary border-primary': filterStatus === 'DRAFT' }"
           @click="filterStatus = 'DRAFT'"
         >
           草稿

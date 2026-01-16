@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FileText, Clock, CheckCircle, XCircle, FileEdit, Users } from 'lucide-vue-next'
 import apiClient from '@/services/api'
 import { toast } from 'vue-sonner';
 import { useAuthStore } from '@/stores/auth'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const authStore = useAuthStore()
 const router = useRouter();
+const route = useRoute();
 
 const stats = ref({
   myTotalApplies: 0,        // 我的申请总数
@@ -27,6 +28,15 @@ const isLoading = ref(true);
 const isAdmin = computed(() => authStore.hasRole('ROLE_ADMIN'));
 const isApprover = computed(() => authStore.hasRole('ROLE_APPROVER'));
 const isEmployee = computed(() => authStore.hasRole('ROLE_EMPLOYEE'));
+
+// 根据当前路由判断哪个卡片应该高亮
+const isCardActive = (cardRoute: string) => {
+  return route.path === cardRoute || route.path.startsWith(cardRoute + '/');
+};
+
+const handleCardClick = (route: string) => {
+  router.push(route);
+};
 
 onMounted(async () => {
   await authStore.checkAuthStatus()
@@ -55,7 +65,8 @@ onMounted(async () => {
       <!-- 系统管理员仪表盘 -->
       <template v-if="isAdmin">
         <!-- 我的申请 -->
-        <Card @click="router.push('/applies/my')" class="cursor-pointer hover:shadow-lg transition">
+        <Card @click="handleCardClick('/applies/my')" 
+              :class="['cursor-pointer hover:shadow-lg transition', isCardActive('/applies/my') ? 'border-primary border-2 bg-primary/5' : '']">
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium">
               我的申请
@@ -63,15 +74,16 @@ onMounted(async () => {
             <FileText class="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div class="text-2xl font-bold">{{ stats.myTotalApplies }}</div>
-            <p class="text-xs text-muted-foreground">
+            <div class="text-2xl font-bold -mt-3">{{ stats.myTotalApplies }}</div>
+            <p class="text-xs text-muted-foreground mt-4">
               我提交的所有申请总数
             </p>
           </CardContent>
         </Card>
 
         <!-- 所有申请 -->
-        <Card @click="router.push('/applies/all')" class="cursor-pointer hover:shadow-lg transition">
+        <Card @click="handleCardClick('/applies/all', 'admin-all-applies')" 
+              :class="['cursor-pointer hover:shadow-lg transition', activeCard === 'admin-all-applies' ? 'border-primary border-2 bg-primary/5' : '']">
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium">
               所有申请
@@ -79,8 +91,8 @@ onMounted(async () => {
             <Users class="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div class="text-2xl font-bold">{{ stats.totalApplies }}</div>
-            <p class="text-xs text-muted-foreground">
+            <div class="text-2xl font-bold -mt-3">{{ stats.totalApplies }}</div>
+            <p class="text-xs text-muted-foreground mt-4">
               包含历史申请、正在进行的申请
             </p>
           </CardContent>
@@ -90,7 +102,8 @@ onMounted(async () => {
       <!-- 审批员仪表盘 -->
       <template v-else-if="isApprover">
         <!-- 我的申请 -->
-        <Card @click="router.push('/applies/my')" class="cursor-pointer hover:shadow-lg transition">
+        <Card @click="handleCardClick('/applies/my')" 
+              :class="['cursor-pointer hover:shadow-lg transition', isCardActive('/applies/my') ? 'border-primary border-2 bg-primary/5' : '']">
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium">
               我的申请
@@ -98,15 +111,16 @@ onMounted(async () => {
             <FileText class="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div class="text-2xl font-bold">{{ stats.myTotalApplies }}</div>
-            <p class="text-xs text-muted-foreground">
+            <div class="text-2xl font-bold -mt-3">{{ stats.myTotalApplies }}</div>
+            <p class="text-xs text-muted-foreground mt-4">
               我提交的所有申请总数
             </p>
           </CardContent>
         </Card>
 
         <!-- 我的待批 -->
-        <Card @click="router.push('/approvals/tasks')" class="cursor-pointer hover:shadow-lg transition">
+        <Card @click="handleCardClick('/approvals/tasks')" 
+              :class="['cursor-pointer hover:shadow-lg transition', isCardActive('/approvals/tasks') ? 'border-primary border-2 bg-primary/5' : '']">
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium">
               我的待批
@@ -114,8 +128,8 @@ onMounted(async () => {
             <Clock class="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div class="text-2xl font-bold">{{ stats.myPendingTasks }}</div>
-            <p class="text-xs text-muted-foreground">
+            <div class="text-2xl font-bold -mt-3">{{ stats.myPendingTasks }}</div>
+            <p class="text-xs text-muted-foreground mt-4">
               可进行通过和不通过的选择
             </p>
           </CardContent>
@@ -125,7 +139,8 @@ onMounted(async () => {
       <!-- 普通员工仪表盘 -->
       <template v-else>
         <!-- 我的申请 -->
-        <Card @click="router.push('/applies/my')" class="cursor-pointer hover:shadow-lg transition">
+        <Card @click="handleCardClick('/applies/my')" 
+              :class="['cursor-pointer hover:shadow-lg transition', isCardActive('/applies/my') ? 'border-primary border-2 bg-primary/5' : '']">
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium">
               我的申请
@@ -133,15 +148,16 @@ onMounted(async () => {
             <FileText class="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div class="text-2xl font-bold">{{ stats.myTotalApplies }}</div>
-            <p class="text-xs text-muted-foreground">
+            <div class="text-2xl font-bold -mt-3">{{ stats.myTotalApplies }}</div>
+            <p class="text-xs text-muted-foreground mt-4">
               我提交的所有申请总数
             </p>
           </CardContent>
         </Card>
 
         <!-- 待审批申请 -->
-        <Card @click="router.push('/applies/my')" class="cursor-pointer hover:shadow-lg transition">
+        <Card @click="handleCardClick('/applies/my')" 
+              :class="['cursor-pointer hover:shadow-lg transition', isCardActive('/applies/my') ? 'border-primary border-2 bg-primary/5' : '']">
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium">
               待审批申请
@@ -149,8 +165,8 @@ onMounted(async () => {
             <Clock class="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div class="text-2xl font-bold">{{ stats.myPendingApplies }}</div>
-            <p class="text-xs text-muted-foreground">
+            <div class="text-2xl font-bold -mt-3">{{ stats.myPendingApplies }}</div>
+            <p class="text-xs text-muted-foreground mt-4">
               我的申请中待审批的数量
             </p>
           </CardContent>

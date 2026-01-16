@@ -72,11 +72,11 @@ const getStatusIcon = (status: string) => {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'APPROVED':
-      return 'text-green-500';
+      return 'text-green-500'; // 已批准保持绿色
     case 'REJECTED':
       return 'text-red-500';
     default:
-      return 'text-yellow-500';
+      return 'text-purple-500'; // 改成紫色
   }
 };
 

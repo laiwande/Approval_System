@@ -85,16 +85,34 @@ public class ApplyService {
             }
             
             leaveApply.setReason(request.getReason());
+            // 设置双向关系
             leaveApply.setApply(savedApply);
+            savedApply.setLeaveApply(leaveApply);
             leaveApplyRepository.save(leaveApply);
         } else if (request.getApplyType() == ApplyType.REIMBURSE) {
+            // 验证必填字段
+            if (request.getExpenseType() == null || request.getExpenseType().trim().isEmpty()) {
+                throw new RuntimeException("费用类型不能为空");
+            }
+            if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new RuntimeException("报销金额必须大于0");
+            }
+            if (request.getReason() == null || request.getReason().trim().isEmpty()) {
+                throw new RuntimeException("报销事由不能为空");
+            }
+            
             ReimburseApply reimburseApply = new ReimburseApply();
-            reimburseApply.setApplyId(savedApply.getApplyId());
-            reimburseApply.setExpenseType(request.getExpenseType());
+            // 不要手动设置applyId，因为使用了@MapsId，JPA会自动从关联的Apply实体中获取ID
+            reimburseApply.setExpenseType(request.getExpenseType().trim());
             reimburseApply.setAmount(request.getAmount());
-            reimburseApply.setReason(request.getReason());
-            reimburseApply.setInvoiceUrl(request.getInvoiceUrl());
+            reimburseApply.setReason(request.getReason().trim());
+            // invoiceUrl可以为空
+            if (request.getInvoiceUrl() != null && !request.getInvoiceUrl().trim().isEmpty()) {
+                reimburseApply.setInvoiceUrl(request.getInvoiceUrl().trim());
+            }
+            // 设置双向关系
             reimburseApply.setApply(savedApply);
+            savedApply.setReimburseApply(reimburseApply);
             reimburseApplyRepository.save(reimburseApply);
         }
 
@@ -104,65 +122,77 @@ public class ApplyService {
     // 提交申请（从草稿状态变为待审批）
     @Transactional
     public ApplyDTO submitApply(Long applyId, Long userId) {
-        Apply apply = applyRepository.findById(applyId)
-                .orElseThrow(() -> new RuntimeException("申请未找到"));
+        try {
+            Apply apply = applyRepository.findById(applyId)
+                    .orElseThrow(() -> new RuntimeException("申请未找到"));
 
-        if (!Objects.equals(apply.getApplicantId(), userId)) {
-            throw new RuntimeException("权限不足，您无法提交不属于您的申请");
+            if (!Objects.equals(apply.getApplicantId(), userId)) {
+                throw new RuntimeException("权限不足，您无法提交不属于您的申请");
+            }
+
+            if (apply.getStatus() != ApplyStatus.DRAFT) {
+                throw new RuntimeException("只能提交草稿状态的申请");
+            }
+
+            // 查找对应的审批流程
+            ApprovalProcess process = approvalProcessRepository
+                    .findByApplyTypeAndStatus(apply.getApplyType(), "0")
+                    .stream()
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("未找到对应的审批流程，请先配置审批流程"));
+
+            // 获取第一个审批节点
+            List<ApprovalNode> nodes = approvalNodeRepository.findByProcessIdOrderByNodeOrderAsc(process.getProcessId());
+            if (nodes.isEmpty()) {
+                throw new RuntimeException("审批流程未配置审批节点，请先配置审批节点");
+            }
+
+            ApprovalNode firstNode = nodes.get(0);
+            apply.setStatus(ApplyStatus.PENDING);
+            apply.setCurrentNode(firstNode.getNodeOrder());
+            apply.setUpdateTime(LocalDateTime.now());
+            applyRepository.save(apply);
+
+            // 创建审批任务
+            createApprovalTasks(apply, firstNode);
+
+            return toApplyDTO(apply);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("提交申请失败: " + e.getMessage(), e);
         }
-
-        if (apply.getStatus() != ApplyStatus.DRAFT) {
-            throw new RuntimeException("只能提交草稿状态的申请");
-        }
-
-        // 查找对应的审批流程
-        ApprovalProcess process = approvalProcessRepository
-                .findByApplyTypeAndStatus(apply.getApplyType(), "0")
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("未找到对应的审批流程"));
-
-        // 获取第一个审批节点
-        List<ApprovalNode> nodes = approvalNodeRepository.findByProcessIdOrderByNodeOrderAsc(process.getProcessId());
-        if (nodes.isEmpty()) {
-            throw new RuntimeException("审批流程未配置审批节点");
-        }
-
-        ApprovalNode firstNode = nodes.get(0);
-        apply.setStatus(ApplyStatus.PENDING);
-        apply.setCurrentNode(firstNode.getNodeOrder());
-        apply.setUpdateTime(LocalDateTime.now());
-        applyRepository.save(apply);
-
-        // 创建审批任务
-        createApprovalTasks(apply, firstNode);
-
-        return toApplyDTO(apply);
     }
 
     // 创建审批任务
     private void createApprovalTasks(Apply apply, ApprovalNode node) {
-        Post post = postRepository.findById(node.getPostId())
-                .orElseThrow(() -> new RuntimeException("岗位未找到"));
+        try {
+            Post post = postRepository.findById(node.getPostId())
+                    .orElseThrow(() -> new RuntimeException("审批节点关联的岗位未找到，岗位ID: " + node.getPostId()));
 
-        // 获取该岗位的所有用户
-        List<User> approvers = userRepository.findAll().stream()
-                .filter(user -> user.getPosts().contains(post))
-                .collect(Collectors.toList());
+            // 获取该岗位的所有用户
+            List<User> approvers = userRepository.findAll().stream()
+                    .filter(user -> user.getPosts() != null && user.getPosts().contains(post))
+                    .collect(Collectors.toList());
 
-        if (approvers.isEmpty()) {
-            throw new RuntimeException("该岗位没有分配用户，无法创建审批任务");
-        }
+            if (approvers.isEmpty()) {
+                throw new RuntimeException("岗位【" + post.getPostName() + "】没有分配用户，无法创建审批任务。请在用户管理中为用户分配该岗位。");
+            }
 
-        // 为每个审批人创建任务
-        for (User approver : approvers) {
-            ApprovalTask task = new ApprovalTask();
-            task.setApplyId(apply.getApplyId());
-            task.setNodeOrder(node.getNodeOrder());
-            task.setApproverId(approver.getUserId());
-            task.setStatus(TaskStatus.PENDING);
-            task.setCreateTime(LocalDateTime.now());
-            approvalTaskRepository.save(task);
+            // 为每个审批人创建任务
+            for (User approver : approvers) {
+                ApprovalTask task = new ApprovalTask();
+                task.setApplyId(apply.getApplyId());
+                task.setNodeOrder(node.getNodeOrder());
+                task.setApproverId(approver.getUserId());
+                task.setStatus(TaskStatus.PENDING);
+                task.setCreateTime(LocalDateTime.now());
+                approvalTaskRepository.save(task);
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("创建审批任务失败: " + e.getMessage(), e);
         }
     }
 

@@ -106,7 +106,7 @@ const formatDateTime = (datetime: string) => new Date(datetime).toLocaleString('
             <TableCell class="text-center">
               <div class="flex gap-2 justify-center">
                 <Button variant="outline" size="sm" @click="viewApplyDetail(task.applyId)">查看详情</Button>
-                <Button variant="default" size="sm" @click="openDialog(task, 'APPROVE')">同意</Button>
+                <Button variant="default" size="sm" class="bg-green-600 hover:bg-green-600 text-white" @click="openDialog(task, 'APPROVE')">同意</Button>
                 <Button variant="destructive" size="sm" @click="openDialog(task, 'REJECT')">拒绝</Button>
               </div>
             </TableCell>
@@ -132,7 +132,12 @@ const formatDateTime = (datetime: string) => new Date(datetime).toLocaleString('
         </div>
         <DialogFooter>
           <Button variant="outline" @click="isDialogOpen = false">取消</Button>
-          <Button @click="handleProcess">{{ action === 'APPROVE' ? '确认同意' : '确认拒绝' }}</Button>
+          <Button 
+            @click="handleProcess"
+            :class="action === 'APPROVE' ? 'bg-green-600 hover:bg-green-600 text-white' : ''"
+          >
+            {{ action === 'APPROVE' ? '确认同意' : '确认拒绝' }}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
