@@ -62,7 +62,7 @@ onMounted(() => {
           v-if="subtitleVisible"
           class="text-base md:text-lg text-muted-foreground font-medium mb-6 tracking-wide"
         >
-          Empower Your Meetings
+          HELLO , WORLD
         </p>
       </transition>
     </div>

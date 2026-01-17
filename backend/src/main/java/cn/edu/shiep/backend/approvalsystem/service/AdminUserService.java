@@ -53,6 +53,36 @@ public class AdminUserService {
         user.setRole(role);
         return toUserDTO(userRepository.save(user));
     }
+
+    public UserDTO updateUser(Long userId, SignupRequest signupRequest) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // 检查邮箱是否被其他用户使用
+        if (signupRequest.getEmail() != null && !signupRequest.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(signupRequest.getEmail())) {
+                throw new RuntimeException("错误: 邮箱已被注册!");
+            }
+            user.setEmail(signupRequest.getEmail());
+        }
+        
+        // 更新用户名
+        if (signupRequest.getUsername() != null) {
+            user.setUserName(signupRequest.getUsername());
+        }
+        
+        // 更新电话
+        if (signupRequest.getPhonenumber() != null) {
+            user.setPhonenumber(signupRequest.getPhonenumber());
+        }
+        
+        // 更新密码（如果提供）
+        if (signupRequest.getPassword() != null && !signupRequest.getPassword().isEmpty()) {
+            String encodedPassword = passwordEncoder.encode(signupRequest.getPassword());
+            user.setPassword(encodedPassword);
+        }
+        
+        return toUserDTO(userRepository.save(user));
+    }
     
     private UserDTO toUserDTO(User user) {
         return UserDTO.builder()

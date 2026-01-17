@@ -16,6 +16,7 @@ export interface ApprovalTask {
   taskId: number;
   applyId: number;
   applyType: string;
+  applicantId?: number;
   applicantName: string;
   applyTitle: string;
   nodeOrder: number;
@@ -34,7 +35,15 @@ const fetchTasks = async () => {
   if (!authStore.isLoggedIn) return;
   try {
     const response = await getMyPendingTasks();
-    pendingTasks.value = response.data;
+    // 过滤掉当前用户自己的申请
+    const currentUserId = authStore.user?.userId;
+    if (currentUserId) {
+      pendingTasks.value = response.data.filter((task: ApprovalTask) => 
+        task.applicantId !== currentUserId
+      );
+    } else {
+      pendingTasks.value = response.data;
+    }
   } catch (error) {
     toast.error('获取待办任务失败');
   }

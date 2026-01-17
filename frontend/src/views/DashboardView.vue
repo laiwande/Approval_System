@@ -6,6 +6,7 @@ import apiClient from '@/services/api'
 import { toast } from 'vue-sonner';
 import { useAuthStore } from '@/stores/auth'
 import { useRouter, useRoute } from 'vue-router'
+import { getMyPendingTasks } from '@/services/approvalService'
 
 const authStore = useAuthStore()
 const router = useRouter();
@@ -47,6 +48,24 @@ onMounted(async () => {
   try {
     const response = await apiClient.get('/dashboard/stats');
     stats.value = response.data;
+    
+    // 如果是审批员或管理员，重新获取过滤后的待办任务数量（排除自己的申请）
+    if (isApprover.value || isAdmin.value) {
+      try {
+        const tasksResponse = await getMyPendingTasks();
+        const currentUserId = authStore.user?.userId;
+        if (currentUserId && tasksResponse.data) {
+          // 过滤掉当前用户自己的申请
+          const filteredTasks = tasksResponse.data.filter((task: any) => 
+            task.applicantId !== currentUserId
+          );
+          stats.value.myPendingTasks = filteredTasks.length;
+        }
+      } catch (error) {
+        // 如果获取待办任务失败，使用原始统计值
+        console.error('获取过滤后的待办任务数量失败', error);
+      }
+    }
   } catch (error: any) {
     toast.error('获取仪表盘数据失败', {
       description: error.response?.data || 'Network Error: 无法连接到服务器。',

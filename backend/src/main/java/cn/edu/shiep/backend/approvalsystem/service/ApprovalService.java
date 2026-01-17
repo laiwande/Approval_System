@@ -218,6 +218,7 @@ public class ApprovalService {
         if (apply != null) {
             builder.applyType(apply.getApplyType().name());
             builder.applyCreateTime(apply.getCreateTime());
+            builder.applicantId(apply.getApplicantId());
 
             User applicant = userRepository.findById(apply.getApplicantId()).orElse(null);
             if (applicant != null) {

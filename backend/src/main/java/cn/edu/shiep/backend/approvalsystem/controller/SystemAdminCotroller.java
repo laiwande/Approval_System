@@ -54,4 +54,11 @@ public class SystemAdminCotroller {
         UserDTO user = adminUserService.createUser(signupRequest, role);
         return ResponseEntity.ok(user);
     }
+
+    @PutMapping("/{userId}")
+    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
+    public ResponseEntity<UserDTO> updateUser(@PathVariable Long userId, @RequestBody SignupRequest signupRequest) {
+        UserDTO updatedUser = adminUserService.updateUser(userId, signupRequest);
+        return ResponseEntity.ok(updatedUser);
+    }
 }

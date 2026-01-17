@@ -16,6 +16,7 @@ public class ApprovalTaskDTO {
     private Long taskId;
     private Long applyId;
     private String applyType;
+    private Long applicantId;
     private String applicantName;
     private Integer nodeOrder;
     private Long approverId;
