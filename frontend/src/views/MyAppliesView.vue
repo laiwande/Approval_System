@@ -137,10 +137,9 @@ const sortedApplies = computed(() => {
             <TableCell>节点 {{ apply.currentNode }}</TableCell>
             <TableCell class="text-center">
               <div class="flex gap-2 justify-center">
-                <Button variant="outline" size="sm" @click="viewDetail(apply.applyId)">查看详情</Button>
                 <AlertDialog v-if="canWithdraw(apply)">
                   <AlertDialogTrigger as-child>
-                    <Button variant="destructive" size="sm">撤回</Button>
+                    <Button variant="outline" size="sm" class="bg-purple-600 hover:bg-purple-700 text-white border-purple-600">撤回</Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>

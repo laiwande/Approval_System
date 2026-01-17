@@ -33,12 +33,6 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/applies/my',
-      name: 'my-applies',
-      component: MyAppliesView,
-      meta: { requiresAuth: true }
-    },
-    {
       path: '/applies/progress',
       name: 'apply-progress',
       component: ApplyProgressView,
@@ -54,6 +48,12 @@ const router = createRouter({
       path: '/applies/all',
       name: 'all-applies',
       component: AllAppliesView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/applies/my',
+      name: 'my-applies',
+      component: MyAppliesView,
       meta: { requiresAuth: true }
     },
     {

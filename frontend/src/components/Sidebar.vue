@@ -76,7 +76,7 @@ watch(() => route.path, (newPath) => {
             >
               <div class="flex items-center">
                 <CalendarDays class="mr-4 h-4 w-4" />
-                我的申请
+                申请管理
               </div>
               <ChevronDown 
                 v-if="myAppliesOpen" 
@@ -100,6 +100,12 @@ watch(() => route.path, (newPath) => {
                 <RouterLink to="/applies/all" active-class="bg-primary/10 text-primary">
                   <FileText class="mr-2 h-4 w-4" />
                   所有申请
+                </RouterLink>
+              </Button>
+              <Button variant="ghost" class="justify-start w-full" as-child>
+                <RouterLink to="/applies/my" active-class="bg-primary/10 text-primary">
+                  <CalendarDays class="mr-2 h-4 w-4" />
+                  我的申请
                 </RouterLink>
               </Button>
             </div>
@@ -178,8 +184,8 @@ watch(() => route.path, (newPath) => {
               class="justify-between w-full"
             >
               <div class="flex items-center">
-                <CalendarDays class="mr-2 h-4 w-4" />
-                我的申请
+                <CalendarDays class="mr-4 h-4 w-4" />
+                申请管理
               </div>
               <ChevronDown 
                 v-if="myAppliesOpen" 
@@ -202,7 +208,7 @@ watch(() => route.path, (newPath) => {
               <Button variant="ghost" class="justify-start w-full" as-child>
                 <RouterLink to="/applies/all" active-class="bg-primary/10 text-primary">
                   <FileText class="mr-2 h-4 w-4" />
-                  所有申请
+                  我的申请
                 </RouterLink>
               </Button>
             </div>
@@ -229,8 +235,8 @@ watch(() => route.path, (newPath) => {
               class="justify-between w-full"
             >
               <div class="flex items-center">
-                <CalendarDays class="mr-2 h-4 w-4" />
-                我的申请
+                <CalendarDays class="mr-4 h-4 w-4" />
+                申请管理
               </div>
               <ChevronDown 
                 v-if="myAppliesOpen" 
@@ -253,7 +259,7 @@ watch(() => route.path, (newPath) => {
               <Button variant="ghost" class="justify-start w-full" as-child>
                 <RouterLink to="/applies/all" active-class="bg-primary/10 text-primary">
                   <FileText class="mr-2 h-4 w-4" />
-                  所有申请
+                  我的申请
                 </RouterLink>
               </Button>
             </div>

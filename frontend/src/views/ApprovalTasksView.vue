@@ -80,7 +80,7 @@ const formatDateTime = (datetime: string) => new Date(datetime).toLocaleString('
 
 <template>
   <div>
-    <h1 class="text-2xl font-bold mb-6">我的待办</h1>
+    <h1 class="text-2xl font-bold mb-6">我的待批</h1>
     <div class="border rounded-md">
       <Table>
         <TableHeader>
@@ -105,7 +105,6 @@ const formatDateTime = (datetime: string) => new Date(datetime).toLocaleString('
             <TableCell>节点 {{ task.nodeOrder }}</TableCell>
             <TableCell class="text-center">
               <div class="flex gap-2 justify-center">
-                <Button variant="outline" size="sm" @click="viewApplyDetail(task.applyId)">查看详情</Button>
                 <Button variant="default" size="sm" class="bg-green-600 hover:bg-green-600 text-white" @click="openDialog(task, 'APPROVE')">同意</Button>
                 <Button variant="destructive" size="sm" @click="openDialog(task, 'REJECT')">拒绝</Button>
               </div>

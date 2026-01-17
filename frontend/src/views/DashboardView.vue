@@ -80,10 +80,10 @@ onMounted(async () => {
             </p>
           </CardContent>
         </Card>
-
+        
         <!-- 所有申请 -->
-        <Card @click="handleCardClick('/applies/all', 'admin-all-applies')" 
-              :class="['cursor-pointer hover:shadow-lg transition', activeCard === 'admin-all-applies' ? 'border-primary border-2 bg-primary/5' : '']">
+        <Card @click="handleCardClick('/applies/all')" 
+              :class="['cursor-pointer hover:shadow-lg transition', isCardActive('/applies/all') ? 'border-primary border-2 bg-primary/5' : '']">
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium">
               所有申请
@@ -102,8 +102,8 @@ onMounted(async () => {
       <!-- 审批员仪表盘 -->
       <template v-else-if="isApprover">
         <!-- 我的申请 -->
-        <Card @click="handleCardClick('/applies/my')" 
-              :class="['cursor-pointer hover:shadow-lg transition', isCardActive('/applies/my') ? 'border-primary border-2 bg-primary/5' : '']">
+        <Card @click="handleCardClick('/applies/all')" 
+              :class="['cursor-pointer hover:shadow-lg transition', isCardActive('/applies/all') ? 'border-primary border-2 bg-primary/5' : '']">
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium">
               我的申请
@@ -139,8 +139,8 @@ onMounted(async () => {
       <!-- 普通员工仪表盘 -->
       <template v-else>
         <!-- 我的申请 -->
-        <Card @click="handleCardClick('/applies/my')" 
-              :class="['cursor-pointer hover:shadow-lg transition', isCardActive('/applies/my') ? 'border-primary border-2 bg-primary/5' : '']">
+        <Card @click="handleCardClick('/applies/all')" 
+              :class="['cursor-pointer hover:shadow-lg transition', isCardActive('/applies/all') ? 'border-primary border-2 bg-primary/5' : '']">
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium">
               我的申请
@@ -156,8 +156,8 @@ onMounted(async () => {
         </Card>
 
         <!-- 待审批申请 -->
-        <Card @click="handleCardClick('/applies/my')" 
-              :class="['cursor-pointer hover:shadow-lg transition', isCardActive('/applies/my') ? 'border-primary border-2 bg-primary/5' : '']">
+        <Card @click="handleCardClick('/applies/all')" 
+              :class="['cursor-pointer hover:shadow-lg transition', isCardActive('/applies/all') ? 'border-primary border-2 bg-primary/5' : '']">
           <CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle class="text-sm font-medium">
               待审批申请
