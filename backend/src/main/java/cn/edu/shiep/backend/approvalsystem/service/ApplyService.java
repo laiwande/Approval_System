@@ -90,6 +90,10 @@ public class ApplyService {
             }
             
             leaveApply.setReason(request.getReason());
+            // 设置附件URL
+            if (request.getAttachmentUrl() != null && !request.getAttachmentUrl().trim().isEmpty()) {
+                leaveApply.setAttachmentUrl(request.getAttachmentUrl().trim());
+            }
             // 设置双向关系
             leaveApply.setApply(savedApply);
             savedApply.setLeaveApply(leaveApply);
@@ -111,9 +115,9 @@ public class ApplyService {
             reimburseApply.setExpenseType(request.getExpenseType().trim());
             reimburseApply.setAmount(request.getAmount());
             reimburseApply.setReason(request.getReason().trim());
-            // invoiceUrl可以为空
-            if (request.getInvoiceUrl() != null && !request.getInvoiceUrl().trim().isEmpty()) {
-                reimburseApply.setInvoiceUrl(request.getInvoiceUrl().trim());
+            // 设置附件URL
+            if (request.getAttachmentUrl() != null && !request.getAttachmentUrl().trim().isEmpty()) {
+                reimburseApply.setAttachmentUrl(request.getAttachmentUrl().trim());
             }
             // 设置双向关系
             reimburseApply.setApply(savedApply);
@@ -126,7 +130,7 @@ public class ApplyService {
 
     // 提交申请（从草稿状态变为待审批）
     @Transactional
-    public ApplyDTO submitApply(Long applyId, Long userId) {
+    public ApplyDTO submitApply(Long applyId, Long userId, Long processId) {
         try {
             Apply apply = applyRepository.findById(applyId)
                     .orElseThrow(() -> new RuntimeException("申请未找到"));
@@ -140,26 +144,52 @@ public class ApplyService {
             }
 
             // 查找对应的审批流程
-            ApprovalProcess process = approvalProcessRepository
-                    .findByApplyTypeAndStatus(apply.getApplyType(), "0")
-                    .stream()
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("未找到对应的审批流程，请先配置审批流程"));
-
-            // 获取第一个审批节点
-            List<ApprovalNode> nodes = approvalNodeRepository.findByProcessIdOrderByNodeOrderAsc(process.getProcessId());
-            if (nodes.isEmpty()) {
-                throw new RuntimeException("审批流程未配置审批节点，请先配置审批节点");
+            ApprovalProcess process;
+            if (processId != null) {
+                // 使用指定的流程
+                process = approvalProcessRepository.findById(processId)
+                        .orElseThrow(() -> new RuntimeException("指定的审批流程不存在"));
+                if (!process.getApplyType().equals(apply.getApplyType())) {
+                    throw new RuntimeException("审批流程的申请类型与申请不匹配");
+                }
+                if (!"0".equals(process.getStatus())) {
+                    throw new RuntimeException("指定的审批流程未启用");
+                }
+            } else {
+                // 使用默认流程（第一个启用的流程）
+                process = approvalProcessRepository
+                        .findByApplyTypeAndStatus(apply.getApplyType(), "0")
+                        .stream()
+                        .findFirst()
+                        .orElseThrow(() -> new RuntimeException("未找到对应的审批流程，请先配置审批流程"));
             }
 
-            ApprovalNode firstNode = nodes.get(0);
-            apply.setStatus(ApplyStatus.PENDING);
-            apply.setCurrentNode(firstNode.getNodeOrder());
-            apply.setUpdateTime(LocalDateTime.now());
-            applyRepository.save(apply);
+            // 获取审批节点
+            List<ApprovalNode> nodes = approvalNodeRepository.findByProcessIdOrderByNodeOrderAsc(process.getProcessId());
+            
+            // 保存流程ID
+            apply.setProcessId(process.getProcessId());
+            
+            if (nodes.isEmpty()) {
+                // 没有节点的流程：使用旧逻辑，给所有 APPROVER 和 ADMIN 创建任务
+                apply.setStatus(ApplyStatus.PENDING);
+                apply.setCurrentNode(0); // 使用0表示没有节点
+                apply.setUpdateTime(LocalDateTime.now());
+                applyRepository.save(apply);
+                
+                // 创建审批任务（给所有审批人和管理员）
+                createApprovalTasksForAllApprovers(apply);
+            } else {
+                // 有节点的流程：使用新逻辑，按节点创建任务
+                ApprovalNode firstNode = nodes.get(0);
+                apply.setStatus(ApplyStatus.PENDING);
+                apply.setCurrentNode(firstNode.getNodeOrder());
+                apply.setUpdateTime(LocalDateTime.now());
+                applyRepository.save(apply);
 
-            // 创建审批任务
-            createApprovalTasks(apply, firstNode);
+                // 创建审批任务（只给节点指定的用户）
+                createApprovalTasks(apply, firstNode);
+            }
 
             return toApplyDTO(apply);
         } catch (RuntimeException e) {
@@ -169,10 +199,41 @@ public class ApplyService {
         }
     }
 
-    // 创建审批任务（基于角色：APPROVER 和 ADMIN）
+    // 创建审批任务（基于节点指定的用户）
     private void createApprovalTasks(Apply apply, ApprovalNode node) {
         try {
-            // 获取所有具有 APPROVER 或 ADMIN 角色的用户（使用 JOIN FETCH 确保角色被正确加载）
+            if (node.getUserId() != null) {
+                // 节点指定了用户，只给该用户创建任务
+                User approver = userRepository.findById(node.getUserId())
+                        .orElseThrow(() -> new RuntimeException("节点指定的审批人不存在"));
+                
+                ApprovalTask task = new ApprovalTask();
+                task.setApplyId(apply.getApplyId());
+                task.setNodeOrder(node.getNodeOrder());
+                task.setApproverId(approver.getUserId());
+                task.setStatus(TaskStatus.PENDING);
+                task.setCreateTime(LocalDateTime.now());
+                approvalTaskRepository.save(task);
+            } else {
+                // 节点没有指定用户（旧流程兼容），给所有 APPROVER 和 ADMIN 创建任务
+                createApprovalTasksForAllApprovers(apply, node.getNodeOrder());
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("创建审批任务失败: " + e.getMessage(), e);
+        }
+    }
+
+    // 创建审批任务（给所有审批人和管理员）- 用于没有节点的流程
+    private void createApprovalTasksForAllApprovers(Apply apply) {
+        createApprovalTasksForAllApprovers(apply, 0);
+    }
+
+    // 创建审批任务（给所有审批人和管理员）- 用于没有节点的流程或节点未指定用户的情况
+    private void createApprovalTasksForAllApprovers(Apply apply, Integer nodeOrder) {
+        try {
+            // 获取所有具有 APPROVER 或 ADMIN 角色的用户
             List<ERole> approverRoles = List.of(ERole.APPROVER, ERole.ADMIN);
             List<User> approvers = userRepository.findByRoleNameInAndActive(approverRoles);
 
@@ -184,7 +245,7 @@ public class ApplyService {
             for (User approver : approvers) {
                 ApprovalTask task = new ApprovalTask();
                 task.setApplyId(apply.getApplyId());
-                task.setNodeOrder(node.getNodeOrder());
+                task.setNodeOrder(nodeOrder);
                 task.setApproverId(approver.getUserId());
                 task.setStatus(TaskStatus.PENDING);
                 task.setCreateTime(LocalDateTime.now());
@@ -284,6 +345,7 @@ public class ApplyService {
                     .endTime(leaveApply.getEndTime())
                     .leaveDays(leaveApply.getLeaveDays())
                     .reason(leaveApply.getReason())
+                    .attachmentUrl(leaveApply.getAttachmentUrl())
                     .build());
         }
 
@@ -295,7 +357,7 @@ public class ApplyService {
                     .expenseType(reimburseApply.getExpenseType())
                     .amount(reimburseApply.getAmount())
                     .reason(reimburseApply.getReason())
-                    .invoiceUrl(reimburseApply.getInvoiceUrl())
+                    .attachmentUrl(reimburseApply.getAttachmentUrl())
                     .build());
         }
 

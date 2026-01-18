@@ -1,5 +1,6 @@
 package cn.edu.shiep.backend.approvalsystem.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,6 +11,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@JsonIgnoreProperties({"process", "post", "user"})
 public class ApprovalNode {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,8 +23,11 @@ public class ApprovalNode {
     @Column(name = "node_order", nullable = false)
     private Integer nodeOrder;
 
-    @Column(name = "post_id", nullable = false)
+    @Column(name = "post_id", nullable = true)
     private Long postId;
+
+    @Column(name = "user_id", nullable = true)
+    private Long userId;
 
     @Column(length = 255)
     private String remark;
@@ -34,4 +39,8 @@ public class ApprovalNode {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", insertable = false, updatable = false)
     private Post post;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    private User user;
 }

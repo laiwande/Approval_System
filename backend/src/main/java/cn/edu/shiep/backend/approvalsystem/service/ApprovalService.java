@@ -120,23 +120,48 @@ public class ApprovalService {
                     .allMatch(t -> t.getStatus() == TaskStatus.DONE);
 
             if (allTasksDone) {
-                // 当前节点所有任务都完成，进入下一节点
-                moveToNextNode(apply);
+                // 当前节点所有任务都完成
+                if (apply.getCurrentNode() == 0) {
+                    // 没有节点的流程（旧流程），所有任务完成后直接审批通过
+                    apply.setStatus(ApplyStatus.APPROVED);
+                    apply.setUpdateTime(LocalDateTime.now());
+                    applyRepository.save(apply);
+                } else {
+                    // 有节点的流程，进入下一节点
+                    moveToNextNode(apply);
+                }
             }
         }
     }
 
     // 移动到下一个审批节点
     private void moveToNextNode(Apply apply) {
-        // 查找审批流程
-        ApprovalProcess process = approvalProcessRepository
-                .findByApplyTypeAndStatus(apply.getApplyType(), "0")
-                .stream()
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("未找到对应的审批流程"));
+        // 查找审批流程（优先使用申请时保存的流程ID）
+        ApprovalProcess process;
+        if (apply.getProcessId() != null) {
+            process = approvalProcessRepository.findById(apply.getProcessId())
+                    .orElseThrow(() -> new RuntimeException("未找到对应的审批流程"));
+        } else {
+            // 兼容旧数据：如果没有保存流程ID，使用默认流程
+            process = approvalProcessRepository
+                    .findByApplyTypeAndStatus(apply.getApplyType(), "0")
+                    .stream()
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("未找到对应的审批流程"));
+        }
 
         // 获取下一个节点
         List<ApprovalNode> nodes = approvalNodeRepository.findByProcessIdOrderByNodeOrderAsc(process.getProcessId());
+        
+        // 如果没有节点，说明是旧流程，不需要移动到下一个节点
+        if (nodes.isEmpty()) {
+            // 旧流程：所有任务完成后直接审批通过
+            apply.setStatus(ApplyStatus.APPROVED);
+            apply.setUpdateTime(LocalDateTime.now());
+            applyRepository.save(apply);
+            return;
+        }
+        
         ApprovalNode nextNode = nodes.stream()
                 .filter(node -> node.getNodeOrder() > apply.getCurrentNode())
                 .findFirst()
@@ -158,18 +183,13 @@ public class ApprovalService {
         }
     }
 
-    // 创建审批任务（基于角色：APPROVER 和 ADMIN）
+    // 创建审批任务（基于节点指定的用户）
     private void createApprovalTasks(Apply apply, ApprovalNode node) {
-        // 获取所有具有 APPROVER 或 ADMIN 角色的用户（使用 JOIN FETCH 确保角色被正确加载）
-        List<ERole> approverRoles = List.of(ERole.APPROVER, ERole.ADMIN);
-        List<User> approvers = userRepository.findByRoleNameInAndActive(approverRoles);
-
-        if (approvers.isEmpty()) {
-            throw new RuntimeException("系统中没有可用的审批人（APPROVER）或管理员（ADMIN），无法创建审批任务");
-        }
-
-        // 为每个审批人创建任务
-        for (User approver : approvers) {
+        if (node.getUserId() != null) {
+            // 节点指定了用户，只给该用户创建任务
+            User approver = userRepository.findById(node.getUserId())
+                    .orElseThrow(() -> new RuntimeException("节点指定的审批人不存在"));
+            
             ApprovalTask task = new ApprovalTask();
             task.setApplyId(apply.getApplyId());
             task.setNodeOrder(node.getNodeOrder());
@@ -177,6 +197,25 @@ public class ApprovalService {
             task.setStatus(TaskStatus.PENDING);
             task.setCreateTime(LocalDateTime.now());
             approvalTaskRepository.save(task);
+        } else {
+            // 节点没有指定用户（旧流程兼容），给所有 APPROVER 和 ADMIN 创建任务
+            List<ERole> approverRoles = List.of(ERole.APPROVER, ERole.ADMIN);
+            List<User> approvers = userRepository.findByRoleNameInAndActive(approverRoles);
+
+            if (approvers.isEmpty()) {
+                throw new RuntimeException("系统中没有可用的审批人（APPROVER）或管理员（ADMIN），无法创建审批任务");
+            }
+
+            // 为每个审批人创建任务
+            for (User approver : approvers) {
+                ApprovalTask task = new ApprovalTask();
+                task.setApplyId(apply.getApplyId());
+                task.setNodeOrder(node.getNodeOrder());
+                task.setApproverId(approver.getUserId());
+                task.setStatus(TaskStatus.PENDING);
+                task.setCreateTime(LocalDateTime.now());
+                approvalTaskRepository.save(task);
+            }
         }
     }
 

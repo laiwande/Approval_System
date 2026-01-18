@@ -34,6 +34,9 @@ public class LeaveApply {
     @Column(length = 255)
     private String reason;
 
+    @Column(name = "attachment_url", length = 500)
+    private String attachmentUrl; // 附件URL（文件上传后的路径）
+
     @OneToOne
     @JoinColumn(name = "apply_id")
     @MapsId

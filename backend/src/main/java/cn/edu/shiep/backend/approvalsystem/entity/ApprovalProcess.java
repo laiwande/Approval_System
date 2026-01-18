@@ -13,7 +13,6 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@JsonIgnoreProperties({"nodes"})
 public class ApprovalProcess {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

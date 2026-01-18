@@ -15,7 +15,8 @@ public class ApprovalProcessRequest {
     @Data
     public static class ApprovalNodeRequest {
         private Integer nodeOrder;
-        private Long postId;
+        private Long postId;  // 岗位ID（可选，与userId二选一）
+        private Long userId;  // 用户ID（可选，与postId二选一）
         private String remark;
     }
 }

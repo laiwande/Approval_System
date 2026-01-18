@@ -6,8 +6,9 @@ export const createApply = (data: any) => {
 };
 
 // 提交申请
-export const submitApply = (id: number) => {
-  return apiClient.post(`/applies/${id}/submit`);
+export const submitApply = (id: number, processId?: number) => {
+  const config = processId ? { params: { processId } } : {};
+  return apiClient.post(`/applies/${id}/submit`, null, config);
 };
 
 // 撤回申请

@@ -1,22 +1,31 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
 import { createApply, submitApply } from '@/services/applyService';
+import { getProcessesByType } from '@/services/approvalProcessService';
+import { uploadFile } from '@/services/fileService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuthStore } from '@/stores/auth';
+import { Upload, X } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 const router = useRouter();
 
 const applyType = ref<'LEAVE' | 'REIMBURSE'>('LEAVE');
+const processes = ref<any[]>([]);
+const selectedProcessId = ref<number | null>(null);
+const isLoadingProcesses = ref(false);
+const attachmentFile = ref<File | null>(null);
+const attachmentUrl = ref<string>('');
+const isUploading = ref(false);
+
 const apply = ref({
   applyType: 'LEAVE' as 'LEAVE' | 'REIMBURSE',
-  remark: '',
   // 请假申请字段
   leaveType: 'ANNUAL' as 'ANNUAL' | 'SICK' | 'PERSONAL',
   startTime: '',
@@ -26,14 +35,72 @@ const apply = ref({
   // 报销申请字段
   expenseType: '',
   amount: '',
-  invoiceUrl: '',
+  reason: '',
 });
+
+// 监听申请类型变化，加载对应的流程列表
+watch(applyType, async (newType) => {
+  await fetchProcesses(newType);
+  selectedProcessId.value = null; // 重置选择的流程
+  attachmentFile.value = null;
+  attachmentUrl.value = '';
+});
+
+// 加载流程列表
+const fetchProcesses = async (type: string) => {
+  isLoadingProcesses.value = true;
+  try {
+    const response = await getProcessesByType(type);
+    processes.value = Array.isArray(response.data) ? response.data : [];
+  } catch (error: any) {
+    console.error('获取审批流程列表失败:', error);
+    processes.value = [];
+  } finally {
+    isLoadingProcesses.value = false;
+  }
+};
+
+onMounted(async () => {
+  await fetchProcesses(applyType.value);
+});
+
+// 处理文件选择
+const handleFileSelect = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file) return;
+
+  // 验证文件大小（10MB）
+  if (file.size > 10 * 1024 * 1024) {
+    toast.error('文件大小不能超过10MB');
+    return;
+  }
+
+  attachmentFile.value = file;
+  isUploading.value = true;
+
+  try {
+    const response = await uploadFile(file);
+    attachmentUrl.value = response.data.url;
+    toast.success('文件上传成功');
+  } catch (error: any) {
+    toast.error('文件上传失败', { description: error.response?.data?.message || '请重试' });
+    attachmentFile.value = null;
+  } finally {
+    isUploading.value = false;
+  }
+};
+
+// 删除附件
+const removeAttachment = () => {
+  attachmentFile.value = null;
+  attachmentUrl.value = '';
+};
 
 const handleSubmit = async () => {
   try {
     const requestData: any = {
       applyType: applyType.value,
-      remark: apply.value.remark,
     };
 
     if (applyType.value === 'LEAVE') {
@@ -44,18 +111,25 @@ const handleSubmit = async () => {
       if (apply.value.leaveDays) {
         requestData.leaveDays = parseFloat(apply.value.leaveDays);
       }
+      // 添加附件URL
+      if (attachmentUrl.value) {
+        requestData.attachmentUrl = attachmentUrl.value;
+      }
     } else {
       requestData.expenseType = apply.value.expenseType;
       requestData.amount = parseFloat(apply.value.amount);
       requestData.reason = apply.value.reason;
-      requestData.invoiceUrl = apply.value.invoiceUrl;
+      // 添加附件URL
+      if (attachmentUrl.value) {
+        requestData.attachmentUrl = attachmentUrl.value;
+      }
     }
 
     const response = await createApply(requestData);
     const applyId = response.data.applyId;
     
-    // 自动提交申请
-    await submitApply(applyId);
+    // 自动提交申请，传递选择的流程ID
+    await submitApply(applyId, selectedProcessId.value || undefined);
     
     toast.success('申请提交成功！');
     router.push('/applies/my');
@@ -134,6 +208,33 @@ const calculateLeaveDays = () => {
             <Label for="reason">请假事由</Label>
             <Input id="reason" v-model="apply.reason" placeholder="请输入请假事由" required />
           </div>
+
+          <!-- 文件上传 -->
+          <div class="space-y-2">
+            <Label>附件上传</Label>
+            <div class="flex items-center gap-2">
+              <Input
+                type="file"
+                @change="handleFileSelect"
+                :disabled="isUploading"
+                class="flex-1"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                @click="removeAttachment"
+                :disabled="!attachmentFile && !attachmentUrl"
+              >
+                <X class="h-4 w-4" />
+              </Button>
+            </div>
+            <p v-if="attachmentFile || attachmentUrl" class="text-sm text-muted-foreground">
+              {{ attachmentFile?.name || '文件已上传' }}
+            </p>
+            <p v-else class="text-sm text-muted-foreground">支持 PDF、Word、Excel、图片等格式，最大10MB</p>
+          </div>
         </template>
 
         <!-- 报销申请表单 -->
@@ -153,18 +254,58 @@ const calculateLeaveDays = () => {
             <Input id="reason" v-model="apply.reason" placeholder="请输入报销事由" required />
           </div>
 
+          <!-- 文件上传 -->
           <div class="space-y-2">
-            <Label for="invoiceUrl">发票附件路径</Label>
-            <Input id="invoiceUrl" v-model="apply.invoiceUrl" placeholder="请输入发票附件路径（可选）" />
+            <Label>附件上传</Label>
+            <div class="flex items-center gap-2">
+              <Input
+                type="file"
+                @change="handleFileSelect"
+                :disabled="isUploading"
+                class="flex-1"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                @click="removeAttachment"
+                :disabled="!attachmentFile && !attachmentUrl"
+              >
+                <X class="h-4 w-4" />
+              </Button>
+            </div>
+            <p v-if="attachmentFile || attachmentUrl" class="text-sm text-muted-foreground">
+              {{ attachmentFile?.name || '文件已上传' }}
+            </p>
+            <p v-else class="text-sm text-muted-foreground">支持 PDF、Word、Excel、图片等格式，最大10MB</p>
           </div>
         </template>
 
+        <!-- 审批流程选择 -->
         <div class="space-y-2">
-          <Label for="remark">备注</Label>
-          <Input id="remark" v-model="apply.remark" placeholder="其他说明（可选）" />
+          <Label for="approvalProcess">选择审批流程（可选）</Label>
+          <Select 
+            :model-value="selectedProcessId ? String(selectedProcessId) : null"
+            @update:model-value="(val) => selectedProcessId = val ? Number(val) : null"
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="选择审批流程" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem :value="null">无特定流程（系统默认）</SelectItem>
+              <SelectItem 
+                v-for="process in processes" 
+                :key="process.processId" 
+                :value="String(process.processId)"
+              >
+                {{ process.processName }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
-        <Button type="submit" class="w-full">提交申请</Button>
+        <Button type="submit" class="w-full" :disabled="isUploading">提交申请</Button>
       </form>
     </CardContent>
   </Card>

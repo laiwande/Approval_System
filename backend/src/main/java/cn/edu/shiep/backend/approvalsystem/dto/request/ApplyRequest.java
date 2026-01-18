@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Data
 public class ApplyRequest {
     private ApplyType applyType;
+    private Long processId; // 审批流程ID（可选，如果不指定则使用默认流程）
     private String remark;
     
     // 请假申请字段
@@ -22,5 +23,5 @@ public class ApplyRequest {
     // 报销申请字段
     private String expenseType;
     private BigDecimal amount;
-    private String invoiceUrl;
+    private String attachmentUrl; // 附件URL（文件上传后返回的路径）
 }

@@ -16,5 +16,5 @@ public class ReimburseApplyDTO {
     private String expenseType;
     private BigDecimal amount;
     private String reason;
-    private String invoiceUrl;
+    private String attachmentUrl; // 附件URL
 }

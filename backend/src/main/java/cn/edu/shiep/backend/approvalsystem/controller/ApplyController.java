@@ -37,12 +37,13 @@ public class ApplyController {
     // 提交申请
     @PostMapping("/{id}/submit")
     public ResponseEntity<ApplyDTO> submitApply(@PathVariable Long id,
+                                                @RequestParam(required = false) Long processId,
                                                 @AuthenticationPrincipal UserDetails userDetails) {
         try {
             UserDetailsImpl userDetailsImpl = (UserDetailsImpl) userDetails;
             Long userId = userDetailsImpl.getId();
 
-            ApplyDTO response = applyService.submitApply(id, userId);
+            ApplyDTO response = applyService.submitApply(id, userId, processId);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             throw e; // 让全局异常处理器处理

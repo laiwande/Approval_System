@@ -59,6 +59,10 @@ public class SecurityConfig {
                 // 登录和注册
                 .requestMatchers("/api/auth/**").permitAll()
 
+                // 文件上传和下载 - 需要登录
+                .requestMatchers("/api/files/**").hasAnyRole("EMPLOYEE", "APPROVER", "ADMIN")
+                .requestMatchers("/uploads/**").permitAll() // 静态文件访问
+
                 // 申请相关 - 所有登录用户都可以创建和查看自己的申请
                 .requestMatchers(HttpMethod.POST, "/api/applies").hasAnyRole("EMPLOYEE", "APPROVER", "ADMIN")
                 .requestMatchers(HttpMethod.GET, "/api/applies/my").hasAnyRole("EMPLOYEE", "APPROVER", "ADMIN")

@@ -32,6 +32,9 @@ public class Apply {
     @Column(name = "current_node", nullable = false)
     private Integer currentNode;
 
+    @Column(name = "process_id")
+    private Long processId; // 审批流程ID（可选，用于追踪使用的流程）
+
     @Column(name = "create_time", nullable = false)
     private LocalDateTime createTime;
 

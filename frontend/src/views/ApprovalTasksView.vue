@@ -2,13 +2,15 @@
 import { onMounted, ref } from 'vue';
 import { getMyPendingTasks, processApproval } from '@/services/approvalService';
 import { getApplyDetail } from '@/services/applyService';
+import { getFileUrl } from '@/services/fileService';
 import { toast } from 'vue-sonner';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthStore } from '@/stores/auth';
+import { FileText, Download } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 
@@ -30,6 +32,9 @@ const selectedTask = ref<ApprovalTask | null>(null);
 const comment = ref('');
 const isDialogOpen = ref(false);
 const action = ref<'APPROVE' | 'REJECT'>('APPROVE');
+const isDetailDialogOpen = ref(false);
+const applyDetail = ref<any>(null);
+const isLoadingDetail = ref(false);
 
 const fetchTasks = async () => {
   if (!authStore.isLoggedIn) return;
@@ -76,15 +81,28 @@ const handleProcess = async () => {
 };
 
 const viewApplyDetail = async (applyId: number) => {
+  isLoadingDetail.value = true;
+  isDetailDialogOpen.value = true;
   try {
     const response = await getApplyDetail(applyId);
-    toast.info('申请详情', { description: JSON.stringify(response.data, null, 2) });
+    applyDetail.value = response.data;
   } catch (error: any) {
     toast.error('获取详情失败');
+    isDetailDialogOpen.value = false;
+  } finally {
+    isLoadingDetail.value = false;
   }
 };
 
 const formatDateTime = (datetime: string) => new Date(datetime).toLocaleString('zh-CN');
+
+const formatDate = (date: string) => new Date(date).toLocaleDateString('zh-CN');
+
+const downloadAttachment = (url: string) => {
+  if (!url) return;
+  const fullUrl = getFileUrl(url);
+  window.open(fullUrl, '_blank');
+};
 </script>
 
 <template>
@@ -109,7 +127,14 @@ const formatDateTime = (datetime: string) => new Date(datetime).toLocaleString('
           <TableRow v-for="task in pendingTasks" :key="task.taskId">
             <TableCell class="pl-6">{{ task.applyType === 'LEAVE' ? '请假' : '报销' }}</TableCell>
             <TableCell>{{ task.applicantName }}</TableCell>
-            <TableCell>{{ task.applyTitle }}</TableCell>
+            <TableCell>
+              <button
+                @click="viewApplyDetail(task.applyId)"
+                class="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+              >
+                {{ task.applyTitle }}
+              </button>
+            </TableCell>
             <TableCell>{{ formatDateTime(task.createTime) }}</TableCell>
             <TableCell>节点 {{ task.nodeOrder }}</TableCell>
             <TableCell class="text-center">
@@ -146,6 +171,151 @@ const formatDateTime = (datetime: string) => new Date(datetime).toLocaleString('
           >
             {{ action === 'APPROVE' ? '确认同意' : '确认拒绝' }}
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <!-- 申请详情对话框 -->
+    <Dialog v-model:open="isDetailDialogOpen">
+      <DialogContent class="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>申请详情</DialogTitle>
+        </DialogHeader>
+        <div v-if="isLoadingDetail" class="py-8 text-center">加载中...</div>
+        <div v-else-if="applyDetail" class="space-y-4 py-4">
+          <!-- 基本信息 -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <Label class="text-sm font-semibold">申请类型</Label>
+              <p class="mt-1">{{ applyDetail.applyType === 'LEAVE' ? '请假' : '报销' }}</p>
+            </div>
+            <div>
+              <Label class="text-sm font-semibold">申请人</Label>
+              <p class="mt-1">{{ applyDetail.applicantName }} ({{ applyDetail.applicantEmail }})</p>
+            </div>
+            <div>
+              <Label class="text-sm font-semibold">申请状态</Label>
+              <p class="mt-1">
+                <span v-if="applyDetail.status === 'PENDING'" class="text-yellow-600">待审批</span>
+                <span v-else-if="applyDetail.status === 'APPROVED'" class="text-green-600">已通过</span>
+                <span v-else-if="applyDetail.status === 'REJECTED'" class="text-red-600">已拒绝</span>
+                <span v-else>{{ applyDetail.status }}</span>
+              </p>
+            </div>
+            <div>
+              <Label class="text-sm font-semibold">申请时间</Label>
+              <p class="mt-1">{{ formatDateTime(applyDetail.createTime) }}</p>
+            </div>
+          </div>
+
+          <!-- 请假申请详情 -->
+          <div v-if="applyDetail.applyType === 'LEAVE' && applyDetail.leaveApply" class="border-t pt-4">
+            <h3 class="font-semibold mb-3">请假信息</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <Label class="text-sm font-semibold">请假类型</Label>
+                <p class="mt-1">
+                  <span v-if="applyDetail.leaveApply.leaveType === 'ANNUAL'">年假</span>
+                  <span v-else-if="applyDetail.leaveApply.leaveType === 'SICK'">病假</span>
+                  <span v-else-if="applyDetail.leaveApply.leaveType === 'PERSONAL'">事假</span>
+                  <span v-else>{{ applyDetail.leaveApply.leaveType }}</span>
+                </p>
+              </div>
+              <div>
+                <Label class="text-sm font-semibold">请假天数</Label>
+                <p class="mt-1">{{ applyDetail.leaveApply.leaveDays }} 天</p>
+              </div>
+              <div>
+                <Label class="text-sm font-semibold">开始时间</Label>
+                <p class="mt-1">{{ formatDateTime(applyDetail.leaveApply.startTime) }}</p>
+              </div>
+              <div>
+                <Label class="text-sm font-semibold">结束时间</Label>
+                <p class="mt-1">{{ formatDateTime(applyDetail.leaveApply.endTime) }}</p>
+              </div>
+              <div class="col-span-2">
+                <Label class="text-sm font-semibold">请假事由</Label>
+                <p class="mt-1">{{ applyDetail.leaveApply.reason }}</p>
+              </div>
+              <div v-if="applyDetail.leaveApply.attachmentUrl" class="col-span-2">
+                <Label class="text-sm font-semibold">附件</Label>
+                <div class="mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    @click="downloadAttachment(applyDetail.leaveApply.attachmentUrl)"
+                  >
+                    <Download class="h-4 w-4 mr-2" />
+                    下载附件
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 报销申请详情 -->
+          <div v-if="applyDetail.applyType === 'REIMBURSE' && applyDetail.reimburseApply" class="border-t pt-4">
+            <h3 class="font-semibold mb-3">报销信息</h3>
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <Label class="text-sm font-semibold">费用类型</Label>
+                <p class="mt-1">{{ applyDetail.reimburseApply.expenseType }}</p>
+              </div>
+              <div>
+                <Label class="text-sm font-semibold">报销金额</Label>
+                <p class="mt-1">¥{{ applyDetail.reimburseApply.amount }}</p>
+              </div>
+              <div class="col-span-2">
+                <Label class="text-sm font-semibold">报销事由</Label>
+                <p class="mt-1">{{ applyDetail.reimburseApply.reason }}</p>
+              </div>
+              <div v-if="applyDetail.reimburseApply.attachmentUrl" class="col-span-2">
+                <Label class="text-sm font-semibold">附件</Label>
+                <div class="mt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    @click="downloadAttachment(applyDetail.reimburseApply.attachmentUrl)"
+                  >
+                    <Download class="h-4 w-4 mr-2" />
+                    下载附件
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 审批记录 -->
+          <div v-if="applyDetail.records && applyDetail.records.length > 0" class="border-t pt-4">
+            <h3 class="font-semibold mb-3">审批记录</h3>
+            <div class="space-y-2">
+              <div
+                v-for="record in applyDetail.records"
+                :key="record.recordId"
+                class="border rounded p-3"
+              >
+                <div class="flex justify-between items-start">
+                  <div>
+                    <p class="font-medium">{{ record.approverName }}</p>
+                    <p class="text-sm text-muted-foreground mt-1">
+                      {{ record.action === 'APPROVE' ? '同意' : '拒绝' }}
+                      <span class="ml-2">{{ formatDateTime(record.actionTime) }}</span>
+                    </p>
+                    <p v-if="record.comment" class="text-sm mt-2">{{ record.comment }}</p>
+                  </div>
+                  <span
+                    :class="record.action === 'APPROVE' ? 'text-green-600' : 'text-red-600'"
+                    class="font-semibold"
+                  >
+                    {{ record.action === 'APPROVE' ? '✓' : '✗' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" @click="isDetailDialogOpen = false">关闭</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

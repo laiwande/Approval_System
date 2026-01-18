@@ -20,4 +20,5 @@ public class LeaveApplyDTO {
     private LocalDateTime endTime;
     private BigDecimal leaveDays;
     private String reason;
+    private String attachmentUrl; // 附件URL
 }

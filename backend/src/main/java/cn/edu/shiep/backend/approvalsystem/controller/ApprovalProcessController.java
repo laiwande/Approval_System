@@ -29,4 +29,29 @@ public class ApprovalProcessController {
         List<ApprovalProcess> processes = approvalProcessService.getAllProcesses();
         return ResponseEntity.ok(processes);
     }
+
+    // 根据申请类型获取启用的审批流程列表
+    @GetMapping("/by-type/{applyType}")
+    public ResponseEntity<List<ApprovalProcess>> getProcessesByType(@PathVariable String applyType) {
+        cn.edu.shiep.backend.approvalsystem.enums.ApplyType type = 
+            cn.edu.shiep.backend.approvalsystem.enums.ApplyType.valueOf(applyType.toUpperCase());
+        List<ApprovalProcess> processes = approvalProcessService.getProcessesByTypeAndStatus(type, "0");
+        return ResponseEntity.ok(processes);
+    }
+
+    // 获取审批流程详情（包含节点）
+    @GetMapping("/{processId}")
+    public ResponseEntity<ApprovalProcess> getProcessById(@PathVariable Long processId) {
+        ApprovalProcess process = approvalProcessService.getProcessById(processId);
+        return ResponseEntity.ok(process);
+    }
+
+    // 更新审批流程
+    @PutMapping("/{processId}")
+    public ResponseEntity<ApprovalProcess> updateProcess(
+            @PathVariable Long processId,
+            @RequestBody ApprovalProcessRequest request) {
+        ApprovalProcess process = approvalProcessService.updateProcess(processId, request);
+        return ResponseEntity.ok(process);
+    }
 }

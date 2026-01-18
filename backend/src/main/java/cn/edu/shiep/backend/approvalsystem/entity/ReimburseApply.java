@@ -25,8 +25,8 @@ public class ReimburseApply {
     @Column(length = 255)
     private String reason;
 
-    @Column(name = "invoice_url", length = 255)
-    private String invoiceUrl;
+    @Column(name = "attachment_url", length = 500)
+    private String attachmentUrl; // 附件URL（文件上传后的路径）
 
     @OneToOne
     @JoinColumn(name = "apply_id")
