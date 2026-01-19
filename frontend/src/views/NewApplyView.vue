@@ -3,7 +3,6 @@ import { ref, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { toast } from 'vue-sonner';
 import { createApply, submitApply } from '@/services/applyService';
-import { getProcessesByType } from '@/services/approvalProcessService';
 import { uploadFile } from '@/services/fileService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,9 +16,6 @@ const authStore = useAuthStore();
 const router = useRouter();
 
 const applyType = ref<'LEAVE' | 'REIMBURSE'>('LEAVE');
-const processes = ref<any[]>([]);
-const selectedProcessId = ref<number | null>(null);
-const isLoadingProcesses = ref(false);
 const attachmentFile = ref<File | null>(null);
 const attachmentUrl = ref<string>('');
 const isUploading = ref(false);
@@ -38,30 +34,10 @@ const apply = ref({
   reason: '',
 });
 
-// 监听申请类型变化，加载对应的流程列表
-watch(applyType, async (newType) => {
-  await fetchProcesses(newType);
-  selectedProcessId.value = null; // 重置选择的流程
+// 监听申请类型变化
+watch(applyType, () => {
   attachmentFile.value = null;
   attachmentUrl.value = '';
-});
-
-// 加载流程列表
-const fetchProcesses = async (type: string) => {
-  isLoadingProcesses.value = true;
-  try {
-    const response = await getProcessesByType(type);
-    processes.value = Array.isArray(response.data) ? response.data : [];
-  } catch (error: any) {
-    console.error('获取审批流程列表失败:', error);
-    processes.value = [];
-  } finally {
-    isLoadingProcesses.value = false;
-  }
-};
-
-onMounted(async () => {
-  await fetchProcesses(applyType.value);
 });
 
 // 处理文件选择
@@ -128,8 +104,8 @@ const handleSubmit = async () => {
     const response = await createApply(requestData);
     const applyId = response.data.applyId;
     
-    // 自动提交申请，传递选择的流程ID
-    await submitApply(applyId, selectedProcessId.value || undefined);
+    // 自动提交申请
+    await submitApply(applyId);
     
     toast.success('申请提交成功！');
     router.push('/applies/my');
@@ -212,27 +188,25 @@ const calculateLeaveDays = () => {
           <!-- 文件上传 -->
           <div class="space-y-2">
             <Label>附件上传</Label>
-            <div class="flex items-center gap-2">
-              <Input
-                type="file"
-                @change="handleFileSelect"
-                :disabled="isUploading"
-                class="flex-1"
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx"
-              />
+            <Input
+              type="file"
+              @change="handleFileSelect"
+              :disabled="isUploading"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx"
+            />
+            <div v-if="attachmentFile || attachmentUrl" class="flex items-center gap-2">
+              <p class="text-sm text-muted-foreground flex-1">
+                {{ attachmentFile?.name || '文件已上传' }}
+              </p>
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
                 @click="removeAttachment"
-                :disabled="!attachmentFile && !attachmentUrl"
               >
                 <X class="h-4 w-4" />
               </Button>
             </div>
-            <p v-if="attachmentFile || attachmentUrl" class="text-sm text-muted-foreground">
-              {{ attachmentFile?.name || '文件已上传' }}
-            </p>
             <p v-else class="text-sm text-muted-foreground">支持 PDF、Word、Excel、图片等格式，最大10MB</p>
           </div>
         </template>
@@ -257,53 +231,28 @@ const calculateLeaveDays = () => {
           <!-- 文件上传 -->
           <div class="space-y-2">
             <Label>附件上传</Label>
-            <div class="flex items-center gap-2">
-              <Input
-                type="file"
-                @change="handleFileSelect"
-                :disabled="isUploading"
-                class="flex-1"
-                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx"
-              />
+            <Input
+              type="file"
+              @change="handleFileSelect"
+              :disabled="isUploading"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.xls,.xlsx"
+            />
+            <div v-if="attachmentFile || attachmentUrl" class="flex items-center gap-2">
+              <p class="text-sm text-muted-foreground flex-1">
+                {{ attachmentFile?.name || '文件已上传' }}
+              </p>
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
                 @click="removeAttachment"
-                :disabled="!attachmentFile && !attachmentUrl"
               >
                 <X class="h-4 w-4" />
               </Button>
             </div>
-            <p v-if="attachmentFile || attachmentUrl" class="text-sm text-muted-foreground">
-              {{ attachmentFile?.name || '文件已上传' }}
-            </p>
             <p v-else class="text-sm text-muted-foreground">支持 PDF、Word、Excel、图片等格式，最大10MB</p>
           </div>
         </template>
-
-        <!-- 审批流程选择 -->
-        <div class="space-y-2">
-          <Label for="approvalProcess">选择审批流程（可选）</Label>
-          <Select 
-            :model-value="selectedProcessId ? String(selectedProcessId) : null"
-            @update:model-value="(val) => selectedProcessId = val ? Number(val) : null"
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="选择审批流程" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem :value="null">无特定流程（系统默认）</SelectItem>
-              <SelectItem 
-                v-for="process in processes" 
-                :key="process.processId" 
-                :value="String(process.processId)"
-              >
-                {{ process.processName }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
 
         <Button type="submit" class="w-full" :disabled="isUploading">提交申请</Button>
       </form>
