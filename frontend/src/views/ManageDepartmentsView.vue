@@ -127,17 +127,16 @@ const handleDeleteDepartment = async (deptId: number) => {
             <TableHead>负责人</TableHead>
             <TableHead>联系电话</TableHead>
             <TableHead>邮箱</TableHead>
-            <TableHead>状态</TableHead>
             <TableHead>操作</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           <TableRow v-for="dept in departments" :key="dept.deptId">
             <TableCell>{{ dept.deptName }}</TableCell>
+            <TableCell>{{ dept.deptCode || 'N/A' }}</TableCell>
             <TableCell>{{ dept.leader || 'N/A' }}</TableCell>
             <TableCell>{{ dept.phone || 'N/A' }}</TableCell>
             <TableCell>{{ dept.email || 'N/A' }}</TableCell>
-            <TableCell>{{ dept.status === '0' ? '正常' : '停用' }}</TableCell>
             <TableCell>
               <Button variant="ghost" size="icon" @click="handleDeleteDepartment(dept.deptId)">
                 <Trash2 class="h-4 w-4 text-red-500" />

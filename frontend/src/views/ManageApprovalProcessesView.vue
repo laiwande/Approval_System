@@ -380,7 +380,7 @@ const removeNode = (form: any, index: number) => {
               <Label for="editProcessName">流程名称</Label>
               <Input id="editProcessName" v-model="editForm.processName" required class="mt-2" />
             </div>
-            <div>
+            <div class="space-y-2">
               <Label for="editApplyType">申请类型</Label>
               <Select v-model="editForm.applyType" class="mt-2">
                 <SelectTrigger>
@@ -428,8 +428,7 @@ const removeNode = (form: any, index: number) => {
                       <Trash2 class="h-4 w-4 text-red-500" />
                     </Button>
                   </div>
-                  
-                  <div>
+                  <div class="space-y-2">
                     <Label>选择审批人</Label>
                     <Select 
                       :model-value="node.userId ? String(node.userId) : ''"
